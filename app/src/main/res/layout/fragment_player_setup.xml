@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#FAFAFA">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Impostor Game"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#1A237E"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@android:drawable/ic_menu_myplaces"
+                app:tint="#5C6BC0" />
+            <TextView
+                android:id="@+id/playersCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Spieler: 0"
+                android:textColor="#5C6BC0"
+                android:textStyle="bold"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/manageWordsBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WORTLISTE"
+            android:backgroundTint="#FFFFFF"
+            android:textColor="#5C6BC0"
+            app:strokeColor="#5C6BC0"
+            app:strokeWidth="1dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:drawableStart="@android:drawable/ic_menu_agenda"
+            android:drawablePadding="4dp" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/playersRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    <!-- Inputs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Name"
+                android:textSize="10sp"
+                android:layout_marginStart="24dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@android:drawable/ic_menu_myplaces"
+                    app:tint="#5C6BC0" />
+                <EditText
+                    android:id="@+id/playerNameInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Name eingeben"
+                    android:textSize="14sp"
+                    android:background="@null"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="4dp" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#5C6BC0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Telefon"
+                android:textSize="10sp"
+                android:layout_marginStart="24dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@android:drawable/ic_menu_call"
+                    app:tint="#5C6BC0" />
+                <EditText
+                    android:id="@+id/phoneNumberInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Telefonnummer"
+                    android:textSize="14sp"
+                    android:inputType="phone"
+                    android:background="@null"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="4dp" />
+            </LinearLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#CCCCCC" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/addPlayerBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HINZUFÜGEN +"
+            android:backgroundTint="#6200EE"
+            android:textSize="12sp"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+
+    <!-- Bottom Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/importContactsBtn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="KONTAKTE"
+            android:backgroundTint="#EDE7F6"
+            android:textColor="#5C6BC0"
+            android:layout_marginEnd="8dp"
+            app:cornerRadius="8dp"
+            android:drawableStart="@android:drawable/ic_menu_myplaces"
+            app:iconTint="#5C6BC0" />
+
+        <Button
+            android:id="@+id/clearAllBtn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:text="ALLE LÖSCHEN"
+            android:backgroundTint="#FBE9E7"
+            android:textColor="#D84315"
+            app:cornerRadius="8dp"
+            android:drawableStart="@android:drawable/ic_menu_delete"
+            app:iconTint="#D84315" />
+
+    </LinearLayout>
+
+    <!-- Impostor Selector and Start -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Impostoren:"
+            android:textColor="#5C6BC0"
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:gravity="center_vertical">
+            <Button
+                android:id="@+id/decreaseImpostorBtn"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:text="-"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+            <TextView
+                android:id="@+id/impostorCountDisplay"
+                android:layout_width="32dp"
+                android:layout_height="wrap_content"
+                android:text="1"
+                android:textAlignment="center"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/increaseImpostorBtn"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:text="+"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/startGameBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:text="SPIEL STARTEN"
+            android:backgroundTint="#7E57C2"
+            app:cornerRadius="12dp"
+            android:drawableStart="@android:drawable/ic_media_play"
+            app:iconTint="#FFFFFF"
+            android:paddingHorizontal="24dp" />
+    </LinearLayout>
+
+</LinearLayout>
