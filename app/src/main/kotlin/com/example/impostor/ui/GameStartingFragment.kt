@@ -62,47 +62,105 @@ class GameStartingFragment : Fragment() {
             
             // Create game round
             val gameLogic = GameLogic(gameRepository)
-            val gameRound = gameLogic.createGameRound(players, impostorCount)
+            val jesterCount = arguments?.getInt("jester_count", 0) ?: 0
+            val detectiveCount = arguments?.getInt("detective_count", 0) ?: 0
+            val detItemsCount = arguments?.getInt("det_items_count", 1) ?: 1
+            val doppelMax = arguments?.getInt("doppel_max", 0) ?: 0
+            
+            val gameRound = gameLogic.createGameRound(
+                players, 
+                impostorCount, 
+                jesterCount, 
+                detectiveCount, 
+                detItemsCount,
+                doppelMax
+            )
             gameRepository.saveCurrentRound(gameRound)
             
             binding.statusText.text = "Sende Nachrichten..."
             
-            val actualImpostorCount = gameRound.impostors.size
-            // Wir wählen die Hilfswörter EINMAL vor der Schleife aus, damit alle die gleichen bekommen
-            val sharedClues = gameRound.clues.shuffled().take(actualImpostorCount)
+            val sharedClues = gameRound.clues.shuffled().take(gameRound.impostors.size)
+            val detectiveNames = players.filter { gameRound.detectives.contains(it.id) }.map { it.name }
             
             // Send SMS to all players
             for (player in players) {
                 binding.statusText.text = "Sende an ${player.name}..."
-                delay(500) // Zeige den Namen kurz an bevor gesendet wird
+                delay(500)
                 
-                val isImpostor = gameRound.impostors.contains(player.id)
-                
-                try {
-                    if (isImpostor) {
-                        if (actualImpostorCount == 1) {
-                            val clue = sharedClues.firstOrNull() ?: "???"
-                            smsService.sendGameRoleMessage(player.phoneNumber, player.name, true, null, clue)
+                when {
+                    gameRound.impostors.contains(player.id) -> {
+                        val otherImpostors = players.filter { 
+                            it.id != player.id && gameRound.impostors.contains(it.id) 
+                        }.map { it.name }
+                        
+                        var info = ""
+                        if (jesterCount > 0) info += "\nEin Scherzbold ist im Spiel! 🤡"
+                        if (detectiveNames.isNotEmpty()) info += "\nDetektive: ${detectiveNames.joinToString(", ")} 🕵️"
+                        
+                        if (otherImpostors.isNotEmpty()) {
+                            val message = """
+                                Impostor - ${player.name}
+                                Deine Komplizen: ${otherImpostors.joinToString(", ")}
+                                Eure Hilfswörter: ${sharedClues.joinToString(", ")}$info
+                                🕵️‍♂️ 🕵️‍♀️
+                            """.trimIndent()
+                            smsService.sendGlobalInfoMessage(player.phoneNumber, message)
                         } else {
-                            val otherImpostors = players.filter { 
-                                it.id != player.id && gameRound.impostors.contains(it.id) 
-                            }.map { it.name }
-                            
-                            if (otherImpostors.isNotEmpty()) {
-                                smsService.sendCompliceMessage(player.phoneNumber, player.name, otherImpostors, sharedClues)
-                            } else {
-                                val clue = sharedClues.firstOrNull() ?: "???"
-                                smsService.sendGameRoleMessage(player.phoneNumber, player.name, true, null, clue)
-                            }
+                            val clue = sharedClues.firstOrNull() ?: "???"
+                            val message = "Impostor - ${player.name}\nDein Hilfswort: $clue$info\nFinde das Wort heraus! 🕵️"
+                            smsService.sendGlobalInfoMessage(player.phoneNumber, message)
                         }
-                    } else {
-                        smsService.sendGameRoleMessage(player.phoneNumber, player.name, false, gameRound.word, null)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    gameRound.jesters.contains(player.id) -> {
+                        var info = ""
+                        if (detectiveNames.isNotEmpty()) info += "\nDetektive: ${detectiveNames.joinToString(", ")} 🕵️"
+                        
+                        val message = """
+                            🤡 Scherzbold - ${player.name}
+                            Du kennst das Wort: ${gameRound.word}
+                            Dein Ziel: Lass dich rausvoten!$info
+                            Sei auffällig, aber nicht zu offensichtlich. 🎭
+                        """.trimIndent()
+                        smsService.sendGlobalInfoMessage(player.phoneNumber, message)
+                    }
+                    gameRound.detectives.contains(player.id) -> {
+                        val items = gameRound.detectiveItemsMap[player.id] ?: emptyList()
+                        var info = ""
+                        if (jesterCount > 0) info += "\nEin Scherzbold ist im Spiel! 🤡"
+                        val otherDets = detectiveNames.filter { it != player.name }
+                        if (otherDets.isNotEmpty()) info += "\nAndere Detektive: ${otherDets.joinToString(", ")} 🕵️"
+
+                        val message = """
+                            🕵️ Detektiv - ${player.name}
+                            Du spielst für die Spieler!$info
+                            Deine verfügbaren Items:
+                            ${items.joinToString("\n- ", prefix = "- ")}
+                            Wähle eines aus und setze es klug ein! 🔍
+                        """.trimIndent()
+                        smsService.sendGlobalInfoMessage(player.phoneNumber, message)
+                    }
+                    gameRound.doppelgangers.contains(player.id) -> {
+                        var info = ""
+                        if (detectiveNames.isNotEmpty()) info += "\nDetektive: ${detectiveNames.joinToString(", ")} 🕵️"
+                        
+                        val message = """
+                            🌓 Doppelgänger - ${player.name}
+                            Du kennst das Wort NICHT.
+                            Du gewinnst mit dem Team, das am Ende gewinnt.$info
+                            Bleib bis zum Ende im Spiel! 🎭
+                        """.trimIndent()
+                        smsService.sendGlobalInfoMessage(player.phoneNumber, message)
+                    }
+                    else -> {
+                        // Spieler - bekommt Infos über Scherzbolde und Detektive
+                        var info = ""
+                        if (jesterCount > 0) info += "\nEin Scherzbold ist im Spiel! 🤡"
+                        if (detectiveNames.isNotEmpty()) info += "\nDetektive: ${detectiveNames.joinToString(", ")} 🕵️"
+                        
+                        val message = "Spieler - ${player.name}\nDas Wort ist: ${gameRound.word} ✓$info\nFinde den Impostor! 🔍"
+                        smsService.sendGlobalInfoMessage(player.phoneNumber, message)
+                    }
                 }
-                
-                // Wartezeit nach dem Senden für das Funkmodul
                 delay(1200)
             }
             

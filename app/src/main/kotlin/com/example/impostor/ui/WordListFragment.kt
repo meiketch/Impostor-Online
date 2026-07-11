@@ -39,9 +39,11 @@ class WordListFragment : Fragment() {
     }
 
     private fun setupUI() {
-        adapter = WordAdapter(emptyList()) { word ->
+        adapter = WordAdapter(emptyList(), onEdit = { word ->
+            showAddEditWordDialog(word)
+        }, onDelete = { word ->
             showDeleteConfirmation(word)
-        }
+        })
         binding.wordsRecyclerView.adapter = adapter
 
         binding.backBtn.setOnClickListener {
@@ -49,7 +51,7 @@ class WordListFragment : Fragment() {
         }
 
         binding.addWordBtn.setOnClickListener {
-            showAddWordDialog()
+            showAddEditWordDialog()
         }
 
         binding.searchWordsInput.addTextChangedListener(object : TextWatcher {
@@ -59,6 +61,47 @@ class WordListFragment : Fragment() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+    }
+
+    private fun showAddEditWordDialog(existingWord: GameWord? = null) {
+        val layout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 20, 50, 10)
+        }
+
+        val wordInput = EditText(requireContext()).apply {
+            hint = "Wort (z.B. Apfel)"
+            setText(existingWord?.word ?: "")
+            if (existingWord != null) isEnabled = false // Wort selbst als ID behalten
+        }
+        val cluesInput = EditText(requireContext()).apply {
+            hint = "Hinweise (Kommagetrennt, z.B. Rot, Frucht, Baum)"
+            setText(existingWord?.clues?.joinToString(", ") ?: "")
+        }
+
+        layout.addView(wordInput)
+        layout.addView(cluesInput)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(if (existingWord == null) "Neues Wort hinzufügen" else "Wort bearbeiten")
+            .setView(layout)
+            .setPositiveButton("Speichern") { _, _ ->
+                val word = wordInput.text.toString().trim()
+                val clues = cluesInput.text.toString().split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                
+                if (word.isNotEmpty() && clues.isNotEmpty()) {
+                    if (existingWord != null) {
+                        // Lösche das alte und füge das neue (bearbeitete) hinzu
+                        gameRepository.deleteWord(existingWord.word)
+                    }
+                    gameRepository.addWord(GameWord(word, clues))
+                    loadWords()
+                }
+            }
+            .setNegativeButton("Abbrechen", null)
+            .show()
     }
 
     private fun loadWords() {

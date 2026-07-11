@@ -6,12 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.impostor.data.GameRepository
+import com.example.impostor.data.SmsService
 import com.example.impostor.databinding.FragmentGamePlayingBinding
 
 class GamePlayingFragment : Fragment() {
 
     private lateinit var binding: FragmentGamePlayingBinding
     private lateinit var gameRepository: GameRepository
+    private lateinit var smsService: SmsService
     private var onGameEnded: (() -> Unit)? = null
     private var onNewRound: (() -> Unit)? = null
 
@@ -28,6 +30,7 @@ class GamePlayingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         gameRepository = GameRepository(requireContext())
+        smsService = SmsService(requireContext())
         
         updateGameInfo()
         
@@ -38,6 +41,33 @@ class GamePlayingFragment : Fragment() {
         binding.newRoundBtn.setOnClickListener {
             newRound()
         }
+
+        binding.sendDetMsgBtn.setOnClickListener {
+            sendDetectiveMessage()
+        }
+    }
+
+    private fun sendDetectiveMessage() {
+        val msg = binding.detectiveMessageInput.text.toString().trim()
+        if (msg.isEmpty()) return
+        
+        val currentRound = gameRepository.getCurrentRound() ?: return
+        val players = gameRepository.getPlayers()
+        val fullMsg = "🕵️ Detektiv Nachricht:\n$msg"
+        
+        // Nachricht geht an: Bürger, Detektive und Scherzbolde
+        // Nachricht geht NICHT an: Impostoren und Doppelgänger
+        for (player in players) {
+            val isImpostor = currentRound.impostors.contains(player.id)
+            val isDoppelganger = currentRound.doppelgangers.contains(player.id)
+            
+            if (!isImpostor && !isDoppelganger) {
+                smsService.sendGlobalInfoMessage(player.phoneNumber, fullMsg)
+            }
+        }
+        
+        binding.detectiveMessageInput.text.clear()
+        android.widget.Toast.makeText(requireContext(), "Nachricht an Verbündete versendet!", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun updateGameInfo() {

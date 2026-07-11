@@ -10,54 +10,47 @@ class GameLogic(private val repository: GameRepository? = null) {
         return words[random.nextInt(words.size)]
     }
     
-    fun selectImpostors(playerIds: List<String>, impostorCount: Int): List<String> {
-        require(impostorCount > 0 && impostorCount < playerIds.size) {
-            "Impostoranzahl muss zwischen 1 und ${playerIds.size - 1} liegen"
-        }
-        
-        // Wir verwenden System.nanoTime() als Seed für maximale Zufälligkeit
-        val random = Random(System.nanoTime())
-        return playerIds.shuffled(random).take(impostorCount)
-    }
-    
-    fun getClueForImpostor(gameWord: GameWord, impostorCount: Int): String {
-        return if (impostorCount == 1) {
-            // Nur 1 Hilfswort für 1 Impostor
-            gameWord.clues[Random.nextInt(gameWord.clues.size)]
-        } else {
-            // 2 verschiedene Hilfswörter für mehrere Impostoren
-            gameWord.clues.shuffled().take(impostorCount).first()
-        }
-    }
-    
-    fun getCluesForImpostors(gameWord: GameWord, impostorCount: Int): List<String> {
-        return if (impostorCount > 1) {
-            gameWord.clues.shuffled().take(2)
-        } else {
-            listOf(gameWord.clues[Random.nextInt(gameWord.clues.size)])
-        }
-    }
-    
     fun createGameRound(
         players: List<Player>,
-        impostorCount: Int
+        impostorCount: Int,
+        jesterCount: Int,
+        detectiveCount: Int,
+        itemsPerDetective: Int,
+        doppelgangerMaxCount: Int
     ): GameRound {
-        require(players.size >= 3) { "Mindestens 3 Spieler erforderlich" }
-        require(impostorCount > 0 && impostorCount < players.size) {
-            "Impostoranzahl ungültig"
+        val random = Random(System.nanoTime())
+        
+        // Doppelgänger Anzahl zufällig bestimmen (0 bis Max)
+        val actualDoppelCount = if (doppelgangerMaxCount > 0) random.nextInt(doppelgangerMaxCount + 1) else 0
+        
+        require(players.size >= (impostorCount + jesterCount + detectiveCount + actualDoppelCount + 1)) { 
+            "Nicht genügend Spieler für diese Rollenverteilung" 
         }
         
         val word = selectGameWord()
-        val playerIds = players.map { it.id }
-        val impostors = selectImpostors(playerIds, impostorCount)
+        val shuffledPlayers = players.shuffled(random)
+        
+        val impostors = shuffledPlayers.take(impostorCount).map { it.id }
+        val jesters = shuffledPlayers.drop(impostorCount).take(jesterCount).map { it.id }
+        val detectives = shuffledPlayers.drop(impostorCount + jesterCount).take(detectiveCount).map { it.id }
+        val doppelgangers = shuffledPlayers.drop(impostorCount + jesterCount + detectiveCount).take(actualDoppelCount).map { it.id }
+        
+        val allDetectiveItems = repository?.getDetectiveItems() ?: DefaultData.items
+        val availableItems = allDetectiveItems.filter { it.minPlayers <= players.size }
+        
+        val detectiveItemsMap = detectives.associateWith {
+            availableItems.shuffled(random).take(itemsPerDetective).map { it.name }
+        }
         
         return GameRound(
             id = System.currentTimeMillis().toString(),
             word = word.word,
             clues = word.clues,
             impostors = impostors,
-            impostor1Id = impostors.getOrNull(0),
-            impostor2Id = impostors.getOrNull(1),
+            jesters = jesters,
+            detectives = detectives,
+            doppelgangers = doppelgangers,
+            detectiveItemsMap = detectiveItemsMap,
             timestamp = System.currentTimeMillis()
         )
     }

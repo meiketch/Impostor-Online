@@ -1,21 +1,17 @@
 package com.example.impostor.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.example.impostor.R
-import com.example.impostor.data.GameLogic
-import com.example.impostor.data.GameRepository
 import com.example.impostor.data.Player
+import com.example.impostor.data.GameRepository
 import com.example.impostor.databinding.FragmentPlayerSetupBinding
 import java.util.UUID
 
@@ -25,7 +21,6 @@ class PlayerSetupFragment : Fragment() {
     private lateinit var gameRepository: GameRepository
     private lateinit var adapter: PlayerAdapter
     private val players = mutableListOf<Player>()
-    private var onGameStarted: ((impostorCount: Int) -> Unit)? = null
 
     private val pickContactLauncher = registerForActivityResult(
         ActivityResultContracts.PickContact()
@@ -44,9 +39,7 @@ class PlayerSetupFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
         gameRepository = GameRepository(requireContext())
-        
         setupAdapter()
         setupImpostorSelector()
         setupButtons()
@@ -62,36 +55,61 @@ class PlayerSetupFragment : Fragment() {
     }
 
     private fun setupImpostorSelector() {
-        val lastCount = gameRepository.getLastImpostorCount()
-        binding.impostorCountDisplay.text = lastCount.toString()
+        binding.impostorCountDisplay.text = gameRepository.getLastImpostorCount().toString()
+        binding.jesterCountDisplay.text = gameRepository.getLastJesterCount().toString()
+        binding.detCountDisplay.text = gameRepository.getLastDetectiveCount().toString()
+        binding.detItemsCountDisplay.text = gameRepository.getLastDetItemsCount().toString()
+        binding.doppelCountDisplay.text = gameRepository.getLastDoppelgangerMaxCount().toString()
         
-        binding.decreaseImpostorBtn.setOnClickListener {
-            val current = binding.impostorCountDisplay.text.toString().toInt()
-            if (current > 1) {
+        setupCounter(binding.decreaseImpostorBtn, binding.increaseImpostorBtn, binding.impostorCountDisplay) { 
+            gameRepository.saveLastImpostorCount(it) 
+        }
+        setupCounter(binding.decreaseJesterBtn, binding.increaseJesterBtn, binding.jesterCountDisplay, min = 0) { 
+            gameRepository.saveLastJesterCount(it) 
+        }
+        setupCounter(binding.decreaseDetBtn, binding.increaseDetBtn, binding.detCountDisplay, min = 0) { 
+            gameRepository.saveLastDetectiveCount(it) 
+        }
+        setupCounter(binding.decreaseDetItemsBtn, binding.increaseDetItemsBtn, binding.detItemsCountDisplay) { 
+            gameRepository.saveLastDetItemsCount(it) 
+        }
+        setupCounter(binding.decreaseDoppelBtn, binding.increaseDoppelBtn, binding.doppelCountDisplay, min = 0) { 
+            gameRepository.saveLastDoppelgangerMaxCount(it)
+        }
+    }
+
+    private fun setupCounter(btnDec: View, btnInc: View, display: TextView, min: Int = 1, onUpdate: (Int) -> Unit) {
+        btnDec.setOnClickListener {
+            val current = display.text.toString().toInt()
+            if (current > min) {
                 val next = current - 1
-                binding.impostorCountDisplay.text = next.toString()
-                gameRepository.saveLastImpostorCount(next)
+                display.text = next.toString()
+                onUpdate(next)
+                updateUI()
             }
         }
-        
-        binding.increaseImpostorBtn.setOnClickListener {
-            val current = binding.impostorCountDisplay.text.toString().toInt()
-            val max = maxOf(1, players.size - 1)
-            if (current < max) {
-                val next = current + 1
-                binding.impostorCountDisplay.text = next.toString()
-                gameRepository.saveLastImpostorCount(next)
-            }
+        btnInc.setOnClickListener {
+            val current = display.text.toString().toInt()
+            val next = current + 1
+            display.text = next.toString()
+            onUpdate(next)
+            updateUI()
         }
     }
 
     private fun setupButtons() {
         binding.addPlayerBtn.setOnClickListener { addPlayer() }
-        binding.importContactsBtn.setOnClickListener { importContacts() }
+        binding.importContactsBtn.setOnClickListener { pickContactLauncher.launch(null) }
         binding.clearAllBtn.setOnClickListener { clearAllPlayers() }
         binding.startGameBtn.setOnClickListener { startGame() }
         binding.manageWordsBtn.setOnClickListener {
             (activity as? MainActivity)?.showWordList()
+        }
+        binding.manageItemsBtn.setOnClickListener {
+            (activity as? MainActivity)?.showDetectiveItems()
+        }
+        binding.rulesBtn.setOnClickListener {
+            (activity as? MainActivity)?.showRules()
         }
     }
 
@@ -105,106 +123,57 @@ class PlayerSetupFragment : Fragment() {
     private fun addPlayer() {
         val name = binding.playerNameInput.text.toString().trim()
         val phone = binding.phoneNumberInput.text.toString().trim()
-
-        if (name.isEmpty() || phone.isEmpty()) {
-            android.widget.Toast.makeText(
-                requireContext(),
-                "Bitte Name und Telefon eingeben",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-            return
+        if (name.isNotEmpty() && phone.isNotEmpty()) {
+            gameRepository.addPlayer(Player(UUID.randomUUID().toString(), name, phone))
+            binding.playerNameInput.text.clear()
+            binding.phoneNumberInput.text.clear()
+            loadPlayers()
         }
-
-        val player = Player(UUID.randomUUID().toString(), name, phone)
-        gameRepository.addPlayer(player)
-        
-        binding.playerNameInput.text.clear()
-        binding.phoneNumberInput.text.clear()
-        
-        loadPlayers()
-    }
-
-    private fun importContacts() {
-        pickContactLauncher.launch(null)
     }
 
     private fun importContact(uri: Uri) {
         try {
-            val cursor = requireContext().contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.Contacts.DISPLAY_NAME, 
-                        ContactsContract.Contacts._ID),
-                null, null, null
-            )
-            
+            val cursor = requireContext().contentResolver.query(uri, null, null, null, null)
             cursor?.use {
                 if (it.moveToFirst()) {
-                    val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
-                    val idIndex = it.getColumnIndex(ContactsContract.Contacts._ID)
-                    
-                    val name = it.getString(nameIndex)
-                    val id = it.getString(idIndex)
-                    
-                    // Telefonnummer auslesen
-                    val phoneCursor = requireContext().contentResolver.query(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-                        "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
-                        arrayOf(id),
-                        null
-                    )
-                    
-                    phoneCursor?.use { pc ->
+                    val id = it.getString(it.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
+                    val name = it.getString(it.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME))
+                    val pCursor = requireContext().contentResolver.query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
+                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf(id), null)
+                    pCursor?.use { pc ->
                         if (pc.moveToFirst()) {
-                            val phoneIndex = pc.getColumnIndex(
-                                ContactsContract.CommonDataKinds.Phone.NUMBER
-                            )
-                            val phone = pc.getString(phoneIndex)
-                            
-                            val player = Player(UUID.randomUUID().toString(), name, phone)
-                            gameRepository.addPlayer(player)
+                            val phone = pc.getString(pc.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER))
+                            gameRepository.addPlayer(Player(UUID.randomUUID().toString(), name, phone))
                             loadPlayers()
                         }
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun clearAllPlayers() {
-        val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-        builder.setTitle("Alle Spieler löschen?")
-        builder.setMessage("Dies kann nicht rückgängig gemacht werden.")
-        builder.setPositiveButton("Ja") { _, _ ->
-            gameRepository.savePlayers(emptyList())
-            loadPlayers()
-        }
-        builder.setNegativeButton("Nein", null)
-        builder.show()
+        gameRepository.savePlayers(emptyList())
+        loadPlayers()
     }
 
     private fun startGame() {
-        val impostorCount = binding.impostorCountDisplay.text.toString().toInt()
-        gameRepository.saveLastImpostorCount(impostorCount)
-        onGameStarted?.invoke(impostorCount)
+        val imp = binding.impostorCountDisplay.text.toString().toInt()
+        val jester = binding.jesterCountDisplay.text.toString().toInt()
+        val det = binding.detCountDisplay.text.toString().toInt()
+        val items = binding.detItemsCountDisplay.text.toString().toInt()
+        val doppel = binding.doppelCountDisplay.text.toString().toInt()
+        (activity as? MainActivity)?.showGameStarting(imp, jester, det, items, doppel)
     }
 
     private fun updateUI() {
         binding.playersCountText.text = "Spieler: ${players.size}"
-        binding.startGameBtn.isEnabled = players.size >= 3
-        
-        val maxImpostors = maxOf(1, players.size - 1)
-        val currentCount = binding.impostorCountDisplay.text.toString().toIntOrNull() ?: gameRepository.getLastImpostorCount()
-        
-        if (currentCount > maxImpostors) {
-            binding.impostorCountDisplay.text = maxImpostors.toString()
-            gameRepository.saveLastImpostorCount(maxImpostors)
-        }
-    }
-
-    fun setOnGameStartedListener(listener: (Int) -> Unit) {
-        this.onGameStarted = listener
+        val imp = binding.impostorCountDisplay.text.toString().toInt()
+        val jester = binding.jesterCountDisplay.text.toString().toInt()
+        val det = binding.detCountDisplay.text.toString().toInt()
+        val doppel = binding.doppelCountDisplay.text.toString().toInt()
+        val totalRoles = imp + jester + det + doppel
+        binding.startGameBtn.isEnabled = players.size >= 3 && totalRoles < players.size
     }
 }

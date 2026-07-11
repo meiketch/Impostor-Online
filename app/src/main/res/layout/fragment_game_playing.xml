@@ -72,6 +72,36 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp"
+        android:background="#F5F5F5"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Detektiv Nachricht:"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/detectiveMessageInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="z.B. Extra-Wort: Banane"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/sendDetMsgBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="An alle senden"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <Button

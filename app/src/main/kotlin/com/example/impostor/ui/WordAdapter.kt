@@ -8,6 +8,7 @@ import com.example.impostor.databinding.ItemWordBinding
 
 class WordAdapter(
     private var words: List<GameWord>,
+    private val onEdit: (GameWord) -> Unit,
     private val onDelete: (GameWord) -> Unit
 ) : RecyclerView.Adapter<WordAdapter.WordViewHolder>() {
 
@@ -17,6 +18,7 @@ class WordAdapter(
         fun bind(gameWord: GameWord) {
             binding.wordText.text = gameWord.word
             binding.cluesText.text = gameWord.clues.joinToString(", ")
+            binding.editWordBtn.setOnClickListener { onEdit(gameWord) }
             binding.deleteWordBtn.setOnClickListener {
                 onDelete(gameWord)
             }

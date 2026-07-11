@@ -71,13 +71,38 @@ class SmsService(private val context: Context) {
         sendSms(phoneNumber, message)
     }
 
-    fun sendGameStartedMessage(phoneNumber: String, playerName: String, totalPlayers: Int, impostorCount: Int) {
+    fun sendJesterMessage(phoneNumber: String, playerName: String, word: String) {
         val message = """
-            Das Spiel startet, $playerName!
-            Spieler: $totalPlayers
-            Impostoren: $impostorCount
-            Schau in die nächste SMS! 🎮
+            🤡 Scherzbold - $playerName
+            Du kennst das Wort: $word
+            Dein Ziel: Lass dich rausvoten!
+            Sei auffällig, aber nicht zu offensichtlich. 🎭
         """.trimIndent()
+        sendSms(phoneNumber, message)
+    }
+
+    fun sendDetectiveMessage(phoneNumber: String, playerName: String, items: List<String>) {
+        val message = """
+            🕵️ Detektiv - $playerName
+            Du spielst für die Spieler!
+            Deine verfügbaren Items:
+            ${items.joinToString("\n- ", prefix = "- ")}
+            Wähle eines aus und setze es klug ein! 🔍
+        """.trimIndent()
+        sendSms(phoneNumber, message)
+    }
+
+    fun sendDoppelgangerMessage(phoneNumber: String, playerName: String) {
+        val message = """
+            🌓 Doppelgänger - $playerName
+            Du kennst das Wort NICHT.
+            Du gewinnst mit dem Team, das am Ende gewinnt.
+            Bleib bis zum Ende im Spiel! 🎭
+        """.trimIndent()
+        sendSms(phoneNumber, message)
+    }
+
+    fun sendGlobalInfoMessage(phoneNumber: String, message: String) {
         sendSms(phoneNumber, message)
     }
 }

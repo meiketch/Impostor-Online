@@ -16,8 +16,10 @@ data class GameRound(
     val word: String,
     val clues: List<String>,
     val impostors: List<String>,
-    val impostor1Id: String? = null,
-    val impostor2Id: String? = null,
+    val jesters: List<String> = emptyList(),
+    val detectives: List<String> = emptyList(),
+    val doppelgangers: List<String> = emptyList(),
+    val detectiveItemsMap: Map<String, List<String>> = emptyMap(), // playerId to items
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -64,6 +66,42 @@ class GameRepository(context: Context) {
 
     fun clearCurrentRound() {
         sharedPrefs.edit().remove("current_round").apply()
+    }
+
+    // Settings
+    fun saveLastImpostorCount(count: Int) {
+        sharedPrefs.edit().putInt("last_impostor_count", count).apply()
+    }
+    fun getLastImpostorCount(): Int = sharedPrefs.getInt("last_impostor_count", 1)
+
+    fun saveLastJesterCount(count: Int) {
+        sharedPrefs.edit().putInt("last_jester_count", count).apply()
+    }
+    fun getLastJesterCount(): Int = sharedPrefs.getInt("last_jester_count", 0)
+
+    fun saveLastDetectiveCount(count: Int) {
+        sharedPrefs.edit().putInt("last_detective_count", count).apply()
+    }
+    fun getLastDetectiveCount(): Int = sharedPrefs.getInt("last_detective_count", 0)
+
+    fun saveLastDetItemsCount(count: Int) {
+        sharedPrefs.edit().putInt("last_det_items_count", count).apply()
+    }
+    fun getLastDetItemsCount(): Int = sharedPrefs.getInt("last_det_items_count", 1)
+
+    fun saveLastDoppelgangerMaxCount(count: Int) {
+        sharedPrefs.edit().putInt("last_doppel_count", count).apply()
+    }
+    fun getLastDoppelgangerMaxCount(): Int = sharedPrefs.getInt("last_doppel_count", 0)
+
+    // Items and Rules
+    fun getDetectiveItems(): List<DetectiveItem> {
+        val json = sharedPrefs.getString("detective_items", null)
+        return if (json == null) DefaultData.items else gson.fromJson(json, object : TypeToken<List<DetectiveItem>>() {}.type)
+    }
+
+    fun saveDetectiveItems(items: List<DetectiveItem>) {
+        sharedPrefs.edit().putString("detective_items", gson.toJson(items)).apply()
     }
 
     // Game History
@@ -113,12 +151,12 @@ class GameRepository(context: Context) {
         saveWordList(words)
     }
 
-    // Settings
-    fun saveLastImpostorCount(count: Int) {
-        sharedPrefs.edit().putInt("last_impostor_count", count).apply()
+    // Rules
+    fun getRules(): String {
+        return sharedPrefs.getString("game_rules", DefaultRules.content) ?: DefaultRules.content
     }
 
-    fun getLastImpostorCount(): Int {
-        return sharedPrefs.getInt("last_impostor_count", 1)
+    fun saveRules(content: String) {
+        sharedPrefs.edit().putString("game_rules", content).apply()
     }
 }

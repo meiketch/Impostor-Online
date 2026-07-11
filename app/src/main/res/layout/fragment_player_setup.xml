@@ -7,15 +7,6 @@
     android:padding="16dp"
     android:background="#FAFAFA">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Impostor Game"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="#1A237E"
-        android:layout_marginBottom="16dp" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -23,17 +14,44 @@
         android:gravity="center_vertical"
         android:layout_marginBottom="12dp">
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Impostor Game"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#1A237E" />
+
+        <ImageButton
+            android:id="@+id/rulesBtn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_agenda"
+            app:tint="#1A237E"
+            android:padding="8dp"
+            android:contentDescription="Regeln" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_badge"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:src="@android:drawable/ic_menu_myplaces"
                 app:tint="#5C6BC0" />
             <TextView
@@ -42,8 +60,9 @@
                 android:layout_height="wrap_content"
                 android:text="Spieler: 0"
                 android:textColor="#5C6BC0"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:layout_marginStart="6dp" />
+                android:layout_marginStart="4dp" />
         </LinearLayout>
 
         <View
@@ -54,15 +73,29 @@
         <Button
             android:id="@+id/manageWordsBtn"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:text="WORTLISTE"
+            android:textSize="10sp"
+            android:padding="0dp"
             android:backgroundTint="#FFFFFF"
             android:textColor="#5C6BC0"
             app:strokeColor="#5C6BC0"
             app:strokeWidth="1dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:drawableStart="@android:drawable/ic_menu_agenda"
-            android:drawablePadding="4dp" />
+            android:layout_marginEnd="6dp" />
+
+        <Button
+            android:id="@+id/manageItemsBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="DT-ITEMS"
+            android:textSize="10sp"
+            android:padding="0dp"
+            android:backgroundTint="#FFFFFF"
+            android:textColor="#5C6BC0"
+            app:strokeColor="#5C6BC0"
+            app:strokeWidth="1dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -70,7 +103,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
     <!-- Inputs -->
@@ -79,28 +112,28 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="bottom"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginEnd="8dp">
+            android:layout_marginEnd="6dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Name"
                 android:textSize="10sp"
-                android:layout_marginStart="24dp" />
+                android:layout_marginStart="20dp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
                     android:src="@android:drawable/ic_menu_myplaces"
                     app:tint="#5C6BC0" />
                 <EditText
@@ -108,10 +141,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Name eingeben"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:background="@null"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="4dp" />
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="2dp" />
             </LinearLayout>
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#5C6BC0" />
         </LinearLayout>
@@ -121,21 +154,21 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginEnd="8dp">
+            android:layout_marginEnd="6dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Telefon"
                 android:textSize="10sp"
-                android:layout_marginStart="24dp" />
+                android:layout_marginStart="20dp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
                     android:src="@android:drawable/ic_menu_call"
                     app:tint="#5C6BC0" />
                 <EditText
@@ -143,11 +176,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Telefonnummer"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:inputType="phone"
                     android:background="@null"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="4dp" />
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="2dp" />
             </LinearLayout>
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#CCCCCC" />
         </LinearLayout>
@@ -155,62 +188,62 @@
         <Button
             android:id="@+id/addPlayerBtn"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:text="HINZUFÜGEN +"
             android:backgroundTint="#6200EE"
-            android:textSize="12sp"
-            app:cornerRadius="8dp" />
+            android:textSize="10sp"
+            android:paddingHorizontal="8dp"
+            app:cornerRadius="6dp" />
     </LinearLayout>
 
-    <!-- Bottom Buttons -->
+    <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
-
+        android:layout_marginBottom="12dp">
         <Button
             android:id="@+id/importContactsBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_weight="1"
             android:text="KONTAKTE"
+            android:textSize="10sp"
             android:backgroundTint="#EDE7F6"
             android:textColor="#5C6BC0"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
             app:cornerRadius="8dp"
             android:drawableStart="@android:drawable/ic_menu_myplaces"
             app:iconTint="#5C6BC0" />
-
         <Button
             android:id="@+id/clearAllBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_weight="1.2"
             android:text="ALLE LÖSCHEN"
+            android:textSize="10sp"
             android:backgroundTint="#FBE9E7"
             android:textColor="#D84315"
             app:cornerRadius="8dp"
             android:drawableStart="@android:drawable/ic_menu_delete"
             app:iconTint="#D84315" />
-
     </LinearLayout>
 
-    <!-- Impostor Selector and Start -->
+    <!-- Role Selectors Row 1 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
-
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Impostoren:"
             android:textColor="#5C6BC0"
             android:textStyle="bold"
-            android:layout_marginEnd="8dp" />
-
+            android:textSize="12sp" />
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -218,42 +251,202 @@
             android:gravity="center_vertical">
             <Button
                 android:id="@+id/decreaseImpostorBtn"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:text="-"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:padding="0dp" />
             <TextView
                 android:id="@+id/impostorCountDisplay"
-                android:layout_width="32dp"
+                android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:text="1"
+                android:textSize="12sp"
                 android:textAlignment="center"
                 android:textStyle="bold" />
             <Button
                 android:id="@+id/increaseImpostorBtn"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:text="+"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:padding="0dp" />
         </LinearLayout>
-
-        <View
+        <View android:layout_width="12dp" android:layout_height="0dp" />
+        <TextView
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/startGameBtn"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Scherzbold:"
+            android:textColor="#5C6BC0"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="60dp"
-            android:text="SPIEL STARTEN"
-            android:backgroundTint="#7E57C2"
-            app:cornerRadius="12dp"
-            android:drawableStart="@android:drawable/ic_media_play"
-            app:iconTint="#FFFFFF"
-            android:paddingHorizontal="24dp" />
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:gravity="center_vertical">
+            <Button
+                android:id="@+id/decreaseJesterBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="-"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+            <TextView
+                android:id="@+id/jesterCountDisplay"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/increaseJesterBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="+"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- Role Selectors Row 2 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Detektive:"
+            android:textColor="#5C6BC0"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:gravity="center_vertical">
+            <Button
+                android:id="@+id/decreaseDetBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="-"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+            <TextView
+                android:id="@+id/detCountDisplay"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/increaseDetBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="+"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+        </LinearLayout>
+        <View android:layout_width="12dp" android:layout_height="0dp" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Doppelg. Max:"
+            android:textColor="#5C6BC0"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:gravity="center_vertical">
+            <Button
+                android:id="@+id/decreaseDoppelBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="-"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+            <TextView
+                android:id="@+id/doppelCountDisplay"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/increaseDoppelBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="+"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Role Selectors Row 3 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Det-Items pro Detektiv:"
+            android:textColor="#5C6BC0"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_badge"
+            android:gravity="center_vertical">
+            <Button
+                android:id="@+id/decreaseDetItemsBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="-"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+            <TextView
+                android:id="@+id/detItemsCountDisplay"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:text="1"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/increaseDetItemsBtn"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="+"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:padding="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/startGameBtn"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="SPIEL STARTEN"
+        android:backgroundTint="#7E57C2"
+        app:cornerRadius="12dp"
+        android:drawableStart="@android:drawable/ic_media_play"
+        app:iconTint="#FFFFFF"
+        android:paddingHorizontal="24dp" />
 
 </LinearLayout>

@@ -14,7 +14,6 @@ import com.example.impostor.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var playerSetupFragment: PlayerSetupFragment
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
@@ -22,45 +21,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
         requestPermissions()
-        
-        if (savedInstanceState == null) {
-            showPlayerSetup()
-        }
+        if (savedInstanceState == null) showPlayerSetup()
     }
 
     private fun requestPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.READ_CONTACTS
-        )
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.READ_PHONE_NUMBERS)
-        }
-        
-        val permissionsToRequest = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-        
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest, PERMISSION_REQUEST_CODE)
-        }
+        val permissions = mutableListOf(Manifest.permission.SEND_SMS, Manifest.permission.READ_CONTACTS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissions.add(Manifest.permission.READ_PHONE_NUMBERS)
+        val toRequest = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (toRequest.isNotEmpty()) ActivityCompat.requestPermissions(this, toRequest.toTypedArray(), PERMISSION_REQUEST_CODE)
     }
 
-    private fun showPlayerSetup() {
-        playerSetupFragment = PlayerSetupFragment()
-        playerSetupFragment.setOnGameStartedListener { impostorCount ->
-            showGameStarting(impostorCount)
-        }
-        
+    fun showPlayerSetup() {
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, playerSetupFragment)
-            .addToBackStack(null)
+            .replace(R.id.fragment_container, PlayerSetupFragment())
             .commit()
     }
 
@@ -71,55 +47,54 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    private fun showGameStarting(impostorCount: Int) {
-        val gameStartingFragment = GameStartingFragment()
-        gameStartingFragment.arguments = Bundle().apply {
-            putInt("impostor_count", impostorCount)
-        }
-        gameStartingFragment.setOnGameReadyListener {
-            showGamePlaying()
-        }
-        
+    fun showDetectiveItems() {
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, gameStartingFragment)
+            .replace(R.id.fragment_container, DetectiveItemsFragment())
+            .addToBackStack(null)
+            .commit()
+    }
+
+    fun showRules() {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, RulesFragment())
+            .addToBackStack(null)
+            .commit()
+    }
+
+    fun showGameStarting(imp: Int, jester: Int, det: Int, items: Int, doppel: Int) {
+        val fragment = GameStartingFragment().apply {
+            arguments = Bundle().apply {
+                putInt("impostor_count", imp)
+                putInt("jester_count", jester)
+                putInt("detective_count", det)
+                putInt("det_items_count", items)
+                putInt("doppel_max", doppel)
+            }
+            setOnGameReadyListener { showGamePlaying() }
+        }
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
             .addToBackStack(null)
             .commit()
     }
 
     private fun showGamePlaying() {
-        val gamePlayingFragment = GamePlayingFragment()
-        gamePlayingFragment.setOnGameEndedListener {
-            showPlayerSetup()
-        }
-        gamePlayingFragment.setOnNewRoundListener {
-            val repository = GameRepository(this)
-            showGameStarting(repository.getLastImpostorCount())
-        }
-        
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, gamePlayingFragment)
-            .addToBackStack(null)
-            .commit()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            for ((index, permission) in permissions.withIndex()) {
-                if (grantResults[index] != PackageManager.PERMISSION_GRANTED) {
-                    // Permission denied
-                    android.widget.Toast.makeText(
-                        this,
-                        "Erforderliche Berechtigung wurde verweigert: $permission",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
+        val fragment = GamePlayingFragment().apply {
+            setOnGameEndedListener { showPlayerSetup() }
+            setOnNewRoundListener {
+                val repo = GameRepository(this@MainActivity)
+                showGameStarting(
+                    repo.getLastImpostorCount(), 
+                    repo.getLastJesterCount(), 
+                    repo.getLastDetectiveCount(), 
+                    repo.getLastDetItemsCount(),
+                    repo.getLastDoppelgangerMaxCount()
+                )
             }
         }
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 }
