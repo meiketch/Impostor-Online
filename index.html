@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Impostor Game</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css?v=7" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Gemeinsam spielen · Jeder auf seinem Gerät</p>
+          <h1>Impostor Game</h1>
+        </div>
+        <label class="theme-picker" for="theme-select">
+          <span>Design</span>
+          <select id="theme-select" aria-label="Design auswählen">
+            <option value="neon">Neon Night</option>
+            <option value="classic">Classic Space</option>
+            <option value="crt">CRT Terminal</option>
+            <option value="bsod">Windows 95 BSOD</option>
+            <option value="cork">Corkboard Case File</option>
+          </select>
+        </label>
+      </header>
+
+      <main class="layout three-column">
+        <section class="panel">
+          <h2>Spiel beitreten</h2>
+
+          <label class="field-label" for="player-name">Dein Name</label>
+          <input id="player-name" type="text" maxlength="40" placeholder="Name eingeben" autocomplete="nickname" />
+
+          <div class="lobby-actions">
+            <button id="create-lobby-btn" class="primary" type="button">Lobby erstellen</button>
+          </div>
+
+          <div class="join-box">
+            <input id="join-code-input" type="text" maxlength="6" placeholder="Lobby-Code eingeben" aria-label="Lobby-Code" />
+            <button id="join-lobby-btn" class="secondary" type="button">Beitreten</button>
+          </div>
+
+          <div id="lobby-meta" class="lobby-meta empty-state">Trage deinen Namen ein und erstelle eine Lobby oder nutze einen Einladungscode.</div>
+          <div id="connection-status" class="connection-status">Nicht verbunden</div>
+        </section>
+
+        <section class="panel">
+          <h2>Spieler <span id="player-count" class="panel-count">0</span></h2>
+
+          <div id="player-list" class="player-list"></div>
+
+          <div id="round-status" class="round-status">Noch keine Runde gestartet.</div>
+          <div id="round-summary" class="round-summary"></div>
+
+          <div id="host-controls" class="host-controls">
+            <div class="host-heading">
+              <div>
+                <span class="host-badge">HOST</span>
+                <h3>Lobby-Einstellungen</h3>
+              </div>
+              <span id="settings-permission" class="muted">Nur der Host kann ändern</span>
+            </div>
+
+            <div class="settings-grid">
+            <div class="counter-box">
+              <span>Impostor</span>
+              <div class="counter">
+                <button type="button" data-action="decrease" data-target="impostorCount">−</button>
+                <strong id="impostorCount">1</strong>
+                <button type="button" data-action="increase" data-target="impostorCount">+</button>
+              </div>
+            </div>
+
+            <div class="counter-box">
+              <span>Jester</span>
+              <div class="counter">
+                <button type="button" data-action="decrease" data-target="jesterCount">−</button>
+                <strong id="jesterCount">0</strong>
+                <button type="button" data-action="increase" data-target="jesterCount">+</button>
+              </div>
+            </div>
+
+            <div class="counter-box">
+              <span>Detektiv</span>
+              <div class="counter">
+                <button type="button" data-action="decrease" data-target="detectiveCount">−</button>
+                <strong id="detectiveCount">0</strong>
+                <button type="button" data-action="increase" data-target="detectiveCount">+</button>
+              </div>
+            </div>
+
+            <div class="counter-box">
+              <span>Items / DT</span>
+              <div class="counter">
+                <button type="button" data-action="decrease" data-target="itemsPerDetective">−</button>
+                <strong id="itemsPerDetective">1</strong>
+                <button type="button" data-action="increase" data-target="itemsPerDetective">+</button>
+              </div>
+            </div>
+
+            <div class="counter-box">
+              <span>Doppelgänger</span>
+              <div class="counter">
+                <button type="button" data-action="decrease" data-target="doppelgangerCount">−</button>
+                <strong id="doppelgangerCount">0</strong>
+                <button type="button" data-action="increase" data-target="doppelgangerCount">+</button>
+              </div>
+            </div>
+            </div>
+
+            <div class="probability-block">
+            <h3>Zusatzrollen</h3>
+
+            <div class="probability-row">
+              <label for="jesterProbability">Jester-Wahrscheinlichkeit</label>
+              <div class="probability-controls">
+                <input id="jesterProbability" type="range" min="0" max="100" value="25" />
+                <span id="jesterProbabilityValue">25%</span>
+              </div>
+              <label class="checkbox-line"><input id="jesterRandomEnabled" type="checkbox" /> Zufällig</label>
+            </div>
+
+            <div class="probability-row">
+              <label for="detectiveProbability">Detektiv-Wahrscheinlichkeit</label>
+              <div class="probability-controls">
+                <input id="detectiveProbability" type="range" min="0" max="100" value="25" />
+                <span id="detectiveProbabilityValue">25%</span>
+              </div>
+              <label class="checkbox-line"><input id="detectiveRandomEnabled" type="checkbox" /> Zufällig</label>
+            </div>
+
+            <div class="probability-row">
+              <label for="doppelgangerProbability">Doppelgänger-Wahrscheinlichkeit</label>
+              <div class="probability-controls">
+                <input id="doppelgangerProbability" type="range" min="0" max="100" value="0" />
+                <span id="doppelgangerProbabilityValue">0%</span>
+              </div>
+              <label class="checkbox-line"><input id="doppelgangerRandomEnabled" type="checkbox" /> Zufällig</label>
+            </div>
+            </div>
+
+            <div id="host-actions" class="button-row host-only">
+              <button id="start-game-btn" class="primary large" type="button">Runde starten</button>
+              <button id="reset-lobby-btn" class="ghost" type="button">Neue Runde</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Dein Spielpanel</h2>
+
+          <div id="current-player-label" class="current-player-label">Noch keinem Spieler beigetreten</div>
+          <div id="private-role-card" class="private-role-card empty-state">
+            Nach dem Spielstart erscheint hier nur deine eigene Rolle.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="netscape-badge" aria-hidden="true">
+      <span class="netscape-logo">N</span>
+      <span>Best Viewed with<br />Netscape Navigator</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./app.js?v=16"></script>
+  </body>
+</html>

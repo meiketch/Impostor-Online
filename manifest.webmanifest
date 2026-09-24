@@ -1,0 +1,10 @@
+{
+  "name": "Impostor Game",
+  "short_name": "Impostor",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "description": "Offline Impostor-Spiel für GitHub Pages.",
+  "icons": []
+}
