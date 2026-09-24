@@ -57,6 +57,17 @@ create table if not exists public.lobby_players (
 
 alter table public.lobby_players enable row level security;
 
+alter table public.game_state enable row level security;
+
+create policy "Public can read game state"
+on public.game_state for select to anon using (true);
+
+create policy "Public can create game state"
+on public.game_state for insert to anon with check (true);
+
+create policy "Public can update game state"
+on public.game_state for update to anon using (true) with check (true);
+
 create policy "Public can read lobby players"
 on public.lobby_players for select to anon using (true);
 

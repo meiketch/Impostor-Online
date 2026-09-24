@@ -45,6 +45,7 @@ const state = {
   round: null,
   wordDeck: [],
   detectiveMessage: "",
+  statusMessage: "",
   lobbyPollTimer: null,
 };
 
@@ -70,14 +71,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   syncFromStorage();
   supabaseReady = await initSupabase();
   if (supabaseReady && state.lobbyCode) {
-    const lobby = await loadLobby(state.lobbyCode);
-    if (lobby) {
-      state.players = lobby.players;
-      state.settings = lobby.settings;
-      state.hostId = lobby.hostId;
-      state.isHost = state.hostId === state.currentPlayerId;
-      state.round = lobby.round;
-      subscribeToLobby();
+    try {
+      const lobby = await loadLobby(state.lobbyCode);
+      if (lobby) {
+        state.players = lobby.players;
+        state.settings = lobby.settings;
+        state.hostId = lobby.hostId;
+        state.isHost = state.hostId === state.currentPlayerId;
+        state.round = lobby.round;
+        subscribeToLobby();
+      }
+    } catch (error) {
+      showStatus(error.message);
     }
   }
   render();
@@ -132,22 +137,27 @@ function bindEvents() {
     if (!name || !code) return showStatus("Gib deinen Namen und einen Lobby-Code ein.");
     if (!supabaseReady) return showStatus("Multiplayer ist nicht verbunden. Prüfe die Supabase-Konfiguration.");
 
-    const lobby = await loadLobby(code);
-    if (!lobby) return showStatus("Diese Lobby wurde nicht gefunden.");
-    const player = { id: createPlayerId(), name };
-    state.currentPlayerId = player.id;
-    state.lobbyCode = code;
-    state.hostId = lobby.hostId;
-    state.isHost = state.hostId === player.id;
-    state.players = [...lobby.players, player];
-    state.settings = { ...defaultSettings, ...lobby.settings };
-    state.round = lobby.round || null;
-    saveIdentity(player.id);
-    render();
-    const joined = await addPlayerToLobby(player);
-    if (!joined) return;
-    subscribeToLobby();
-    render();
+    try {
+      const lobby = await loadLobby(code);
+      if (!lobby) return showStatus("Diese Lobby wurde nicht gefunden.");
+      const player = { id: createPlayerId(), name };
+      state.currentPlayerId = player.id;
+      state.lobbyCode = code;
+      state.hostId = lobby.hostId;
+      state.isHost = state.hostId === player.id;
+      state.players = [...lobby.players, player];
+      state.settings = { ...defaultSettings, ...lobby.settings };
+      state.round = lobby.round || null;
+      saveIdentity(player.id);
+      render();
+      const joined = await addPlayerToLobby(player);
+      if (!joined) return;
+      subscribeToLobby();
+      render();
+    } catch (error) {
+      console.error("Lobby join failed:", error);
+      showStatus(error.message);
+    }
   });
 
   document.getElementById("start-game-btn").addEventListener("click", async () => {
@@ -514,16 +524,21 @@ document.addEventListener("click", async (event) => {
 });
 
 async function addPlayerToLobby(player) {
-  const { error } = await supabaseClient.from("lobby_players").upsert({
-    lobby_code: state.lobbyCode,
-    player_id: player.id,
-    name: player.name,
-  }, { onConflict: "lobby_code,player_id" });
-  if (error) {
+  try {
+    const { error } = await supabaseClient.from("lobby_players").upsert({
+      lobby_code: state.lobbyCode,
+      player_id: player.id,
+      name: player.name,
+    }, { onConflict: "lobby_code,player_id" });
+    if (error) {
+      throw new Error(`Spieler konnte nicht beitreten (${error.code || "Supabase"}): ${error.message}`);
+    }
+  } catch (error) {
     console.warn("Player join failed:", error);
-    showStatus("Spieler konnte nicht beitreten. Prüfe die Supabase-Tabelle lobby_players.");
+    showStatus(error.message || "Spieler konnte nicht beitreten.");
     return false;
   }
+  state.statusMessage = "";
   await refreshLobbyPlayers();
   return true;
 }
@@ -540,6 +555,12 @@ async function removePlayerFromLobby(playerId) {
 function renderRoundSummary() {
   const status = document.getElementById("round-status");
   const summary = document.getElementById("round-summary");
+
+  if (state.statusMessage) {
+    status.textContent = state.statusMessage;
+    summary.innerHTML = "";
+    return;
+  }
 
   if (!state.round) {
     status.textContent = "Noch keine Runde gestartet.";
@@ -762,6 +783,7 @@ function generateLobbyCode() {
 }
 
 function showStatus(message) {
+  state.statusMessage = message;
   const status = document.getElementById("round-status");
   if (status) status.textContent = message;
 }
@@ -804,13 +826,20 @@ async function initSupabase() {
 }
 
 async function loadLobby(code) {
-  const [stateResult, playersResult] = await Promise.all([
-    supabaseClient.from("game_state").select("*").eq("id", code).maybeSingle(),
-    supabaseClient.from("lobby_players").select("player_id, name").eq("lobby_code", code),
-  ]);
+  let results;
+  try {
+    results = await Promise.all([
+      supabaseClient.from("game_state").select("*").eq("id", code).maybeSingle(),
+      supabaseClient.from("lobby_players").select("player_id, name").eq("lobby_code", code),
+    ]);
+  } catch (error) {
+    throw new Error(`Supabase-Verbindung fehlgeschlagen: ${error.message || "Netzwerkfehler"}`);
+  }
+
+  const [stateResult, playersResult] = results;
   if (stateResult.error || playersResult.error) {
-    console.warn("Lobby read failed:", stateResult.error || playersResult.error);
-    return null;
+    const error = stateResult.error || playersResult.error;
+    throw new Error(`Lobby konnte nicht geladen werden (${error.code || "Supabase"}): ${error.message}`);
   }
   const data = stateResult.data;
   if (!data) return null;
@@ -893,7 +922,7 @@ async function syncToSupabase() {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=13").catch((error) => {
+    navigator.serviceWorker.register("./sw.js?v=14").catch((error) => {
       console.warn("Service worker registration failed:", error);
     });
   });
