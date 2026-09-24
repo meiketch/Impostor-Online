@@ -211,7 +211,7 @@ function bindEvents() {
     const id = button.dataset.removeId;
     state.players = state.players.filter((player) => player.id !== id);
     savePlayers();
-    removePlayerFromLobby(id);
+    removePlayerFromLobby(id).then(() => refreshLobbyPlayers());
     render();
   });
 
@@ -872,11 +872,10 @@ async function refreshLobbyPlayers() {
     console.warn("Lobby read failed:", error);
     return;
   }
-  const playersById = new Map(state.players.map((player) => [player.id, player]));
-  (data || []).forEach((player) => {
-    playersById.set(player.player_id, { id: player.player_id, name: player.name });
-  });
-  state.players = [...playersById.values()];
+  state.players = (data || []).map((player) => ({
+    id: player.player_id,
+    name: player.name,
+  }));
   render();
 }
 
