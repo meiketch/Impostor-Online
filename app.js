@@ -125,10 +125,20 @@ function bindEvents() {
     state.players = [player];
     state.round = null;
     saveIdentity(player.id);
-    await syncToSupabase();
-    await addPlayerToLobby(player);
-    subscribeToLobby();
-    render();
+    try {
+      if (supabaseReady) {
+        const synced = await syncToSupabase();
+        if (!synced) return;
+        const joined = await addPlayerToLobby(player);
+        if (!joined) return;
+        subscribeToLobby();
+      }
+      state.statusMessage = "";
+      render();
+    } catch (error) {
+      console.error("Lobby creation failed:", error);
+      showStatus(error.message || "Lobby konnte nicht erstellt werden.");
+    }
   });
 
   document.getElementById("join-lobby-btn").addEventListener("click", async () => {
@@ -898,7 +908,7 @@ function subscribeToLobby() {
 }
 
 async function syncToSupabase() {
-  if (!supabaseReady || !supabaseClient || !state.lobbyCode) return;
+  if (!supabaseReady || !supabaseClient || !state.lobbyCode) return true;
 
   try {
     const payload = {
@@ -913,10 +923,13 @@ async function syncToSupabase() {
       .upsert(payload, { onConflict: "id" });
 
     if (error) {
-      console.warn("Supabase sync failed:", error);
+      throw new Error(`Lobby konnte nicht gespeichert werden (${error.code || "Supabase"}): ${error.message}`);
     }
+    return true;
   } catch (error) {
     console.warn("Supabase sync failed:", error);
+    showStatus(error.message || "Lobby konnte nicht gespeichert werden.");
+    return false;
   }
 }
 
