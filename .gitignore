@@ -1,25 +1,16 @@
-# Gradle
-.gradle/
-build/
-*.apk
-*.aar
-
-# Android Studio
-.idea/
-*.iml
-*.iws
-*.ipr
-*.apk
-local.properties
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Kotlin
-*.kt~
-.kotlin/
+# Editor
+.idea/
+.vscode/
+*.iml
 
-# Build output
-bin/
-out/
+# Build output / deps (entfällt, da statische Seite – Platzhalter)
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
