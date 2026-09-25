@@ -1142,7 +1142,8 @@ async function initSupabase() {
 
     supabaseClient = window.supabase.createClient(
       window.SUPABASE_CONFIG.url,
-      window.SUPABASE_CONFIG.anonKey
+      window.SUPABASE_CONFIG.anonKey,
+      { auth: { storage: window.sessionStorage } }
     );
 
     // Identität über eine anonyme Auth-Session (Gerät = Spieler). Nur so kann RLS
