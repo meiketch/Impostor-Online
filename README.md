@@ -54,3 +54,28 @@ Oben rechts kann zwischen mehreren Designs gewechselt werden:
 - Corkboard Case File
 
 Die Auswahl wird lokal im Browser gespeichert.
+
+## Supabase einrichten (Multiplayer)
+
+Die Spielerliste, Lobby-Einstellungen und die Rollenverteilung laufen über ein Supabase-Projekt.
+So richtest du es ein:
+
+1. **Schema + Row Level Security anwenden:** `supabase/schema.sql` im Supabase SQL-Editor ausführen (Dashboard → SQL → New query).
+2. **Anonymous Sign-In aktivieren:** Authentication → Providers → **Anonymous** → Enable. Das Frontend meldet sich anonym an – ein Gerät entspricht einem Spieler.
+3. **Realtime aktivieren:** Database → Replication → Publication: die Tabellen `game_state`, `lobby_players`, `player_rounds`, `lobby_messages` hinzufügen.
+4. `supabase-config.js` mit deiner Projekt-URL und dem anon key befüllen (oder `supabase-config.example.js` kopieren).
+
+### Sicherheit: Rollen-Geheimnis
+
+Seit dem Refactor werden **keine geheimen Spieldaten mehr an alle Clients verteilt**:
+
+- Das geheime Wort, die vollständige Rollenzuordnung und die Impostor-Hilfswörter liegen **nur beim Host** und werden nie als Ganzes synchronisiert.
+- Jeder Spieler erhält ausschließlich **seine eigene Rolle** (Tabelle `player_rounds`, per RLS nur für die eigene Auth-UID lesbar).
+- Nur der Host darf `game_state` schreiben; Spieler tragen sich nur selbst in `lobby_players` ein.
+- Detektiv-Nachrichten laufen über `lobby_messages` (nur Lobby-Mitglieder). Die Rot/Schwarz-Anzeige bleibt bewusst rein clientseitig.
+
+Grenze: Eine statische GitHub-Pages-Seite kann einen technisch versierten Mitspieler, der aktiv nach Geheimnissen sucht, nicht hundertprozentig aussperren – dafür bräuchte es serverseitige Logik (z. B. Supabase Edge Functions). Der Standardweg (eigene Rolle sehen, andere Rollen nicht) ist jetzt abgesichert.
+
+### Ohne Supabase
+
+Ohne gültige `supabase-config.js` läuft das Spiel weiterhin komplett **lokal im Browser** (eine Runde auf einem Gerät, Sync über localStorage-Tabs).

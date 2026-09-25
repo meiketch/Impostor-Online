@@ -205,6 +205,10 @@ const state = {
   detectiveMessage: "",
   statusMessage: "",
   lobbyPollTimer: null,
+  supabaseUserId: null,
+  rolePayload: null,
+  syncedRoundId: null,
+  roundIdFromServer: null,
 };
 
 let supabaseClient = null;
@@ -215,12 +219,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
   await loadWords();
   if (!state.currentPlayerId) {
-    localStorage.removeItem(STORAGE_KEYS.shared);
-    localStorage.removeItem(STORAGE_KEYS.players);
-    localStorage.removeItem(STORAGE_KEYS.round);
-    state.lobbyCode = null;
-    state.players = [];
-    state.round = null;
+    if (!window.SUPABASE_CONFIG || !window.SUPABASE_CONFIG.url) {
+      // Lokaler Modus: frischer Start ohne Multiplayer-Reste.
+      localStorage.removeItem(STORAGE_KEYS.shared);
+      localStorage.removeItem(STORAGE_KEYS.players);
+      localStorage.removeItem(STORAGE_KEYS.round);
+      state.lobbyCode = null;
+      state.players = [];
+      state.round = null;
+    } else {
+      // Supabase-Modus: Identität kommt aus der Auth-Session (Restore der Lobby bleibt erhalten).
+      localStorage.removeItem(STORAGE_KEYS.round);
+      state.round = null;
+    }
   }
   hydrateSharedState();
   hydrateSettings();
@@ -228,6 +239,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   hydrateRound();
   syncFromStorage();
   supabaseReady = await initSupabase();
+  if (supabaseReady) {
+    state.currentPlayerId = state.supabaseUserId;
+    saveIdentity(state.supabaseUserId);
+    state.round = null;
+    localStorage.removeItem(STORAGE_KEYS.round);
+  }
   if (supabaseReady && state.lobbyCode) {
     try {
       const lobby = await loadLobby(state.lobbyCode);
@@ -237,6 +254,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         state.hostId = lobby.hostId;
         state.isHost = state.hostId === state.currentPlayerId;
         state.round = lobby.round;
+        state.roundIdFromServer = lobby.roundId;
+        if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
+        await loadLatestDetectiveMessage();
         subscribeToLobby();
       }
     } catch (error) {
@@ -258,7 +278,7 @@ window.addEventListener("storage", (event) => {
     if (incoming.hostId) state.hostId = incoming.hostId;
     if (Array.isArray(incoming.players) && (!supabaseReady || !state.lobbyCode)) state.players = incoming.players;
     if (incoming.settings) state.settings = { ...defaultSettings, ...incoming.settings };
-    if (incoming.round) state.round = incoming.round;
+    if (incoming.round && !(supabaseReady && state.lobbyCode)) state.round = incoming.round;
     render();
   } catch (error) {
     console.warn("Shared state sync failed:", error);
@@ -312,7 +332,8 @@ function bindEvents() {
     const name = getPlayerName();
     if (!name) return showStatus("Gib zuerst deinen Namen ein.");
     const code = generateLobbyCode();
-    const player = { id: createPlayerId(), name };
+    const player = { id: supabaseReady ? state.supabaseUserId : createPlayerId(), name };
+    if (!player.id) return showStatus("Multiplayer-Identität nicht verfügbar.");
     state.currentPlayerId = player.id;
     state.lobbyCode = code;
     state.hostId = player.id;
@@ -341,11 +362,12 @@ function bindEvents() {
     const code = document.getElementById("join-code-input").value.trim().toUpperCase();
     if (!name || !code) return showStatus("Gib deinen Namen und einen Lobby-Code ein.");
     if (!supabaseReady) return showStatus("Multiplayer ist nicht verbunden. Prüfe die Supabase-Konfiguration.");
+    if (!isValidLobbyCode(code)) return showStatus("Ungültiger Lobby-Code (5 Zeichen, ohne 0/O/1/I).");
 
     try {
       const lobby = await loadLobby(code);
       if (!lobby) return showStatus("Diese Lobby wurde nicht gefunden.");
-      const player = { id: createPlayerId(), name };
+      const player = { id: supabaseReady ? state.supabaseUserId : createPlayerId(), name };
       state.currentPlayerId = player.id;
       state.lobbyCode = code;
       state.hostId = lobby.hostId;
@@ -357,6 +379,8 @@ function bindEvents() {
       render();
       const joined = await addPlayerToLobby(player);
       if (!joined) return;
+      if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
+      await loadLatestDetectiveMessage();
       subscribeToLobby();
       render();
     } catch (error) {
@@ -372,17 +396,13 @@ function bindEvents() {
         throw new Error("Erstelle zuerst eine Lobby.");
       }
 
-      const totalRequired =
-        state.settings.impostorCount +
-        state.settings.jesterCount +
-        state.settings.detectiveCount +
-        state.settings.doppelgangerCount;
+      const roleCounts = computeRoleCounts(state.settings);
 
-      if (state.players.length < totalRequired + 1) {
+      if (state.players.length < roleCounts.total + 1) {
         throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
       }
 
-      state.round = createGameRound(state.players, state.settings);
+      state.round = createGameRound(state.players, state.settings, roleCounts);
       saveRound();
       render();
       await syncToSupabase();
@@ -394,6 +414,8 @@ function bindEvents() {
   document.getElementById("reset-lobby-btn").addEventListener("click", () => {
     if (!state.isHost) return showStatus("Nur der Host kann eine neue Runde starten.");
     state.round = null;
+    state.rolePayload = null;
+    state.detectiveMessage = "";
     saveRound();
     render();
   });
@@ -628,7 +650,8 @@ function saveSettings() {
 }
 
 function saveRound() {
-  if (state.round) {
+  // Im Supabase-Modus landet die Runde NIE in localStorage – nur die eigene Rolle.
+  if (state.round && !supabaseReady) {
     localStorage.setItem(STORAGE_KEYS.round, JSON.stringify(state.round));
   } else {
     localStorage.removeItem(STORAGE_KEYS.round);
@@ -642,7 +665,7 @@ function persistSharedState() {
     lobbyCode: state.lobbyCode,
     players: state.players,
     settings: state.settings,
-    round: state.round,
+    round: supabaseReady ? null : state.round,
     hostId: state.hostId,
     updatedAt: Date.now(),
   };
@@ -729,7 +752,7 @@ function renderPrivateRoleCard() {
   const card = document.getElementById("private-role-card");
   const existingInput = document.getElementById("detective-message-input");
   const draftMessage = existingInput ? existingInput.value : null;
-  if (!state.round || !state.currentPlayerId) {
+  if (!state.currentPlayerId) {
     card.classList.add("empty-state");
     card.textContent = "Nach dem Spielstart erscheint hier nur deine eigene Rolle.";
     return;
@@ -742,9 +765,17 @@ function renderPrivateRoleCard() {
     return;
   }
 
-  const role = getPlayerRoleInfo(player.id, state.round);
+  const role = state.rolePayload || (state.round ? getPlayerRoleInfo(player.id, state.round) : null);
+  if (!role) {
+    card.classList.add("empty-state");
+    card.textContent = state.roundIdFromServer
+      ? "Runde gestartet · Rolle wird geladen …"
+      : "Nach dem Spielstart erscheint hier nur deine eigene Rolle.";
+    return;
+  }
+
   const badgeClass = `role-${role.key}`;
-  const detectiveMessage = state.round.detectiveMessage || "";
+  const detectiveMessage = state.round ? (state.round.detectiveMessage || "") : (state.detectiveMessage || "");
   const canReadMessage = ["detective", "jester", "player"].includes(role.key);
   card.classList.remove("empty-state");
   card.innerHTML = `
@@ -774,10 +805,28 @@ function renderPrivateRoleCard() {
 
 document.addEventListener("click", async (event) => {
   if (event.target.id !== "send-detective-message-btn") return;
-  if (!state.round || !state.currentPlayerId || !state.round.detectives.includes(state.currentPlayerId)) return;
-  state.round.detectiveMessage = document.getElementById("detective-message-input").value.trim();
+  if (!state.currentPlayerId) return;
+  const isDetective = state.round
+    ? state.round.detectives.includes(state.currentPlayerId)
+    : Boolean(state.rolePayload && state.rolePayload.key === "detective");
+  if (!isDetective) return;
+
+  const message = document.getElementById("detective-message-input").value.trim();
+  if (supabaseReady && state.lobbyCode) {
+    const { error } = await supabaseClient
+      .from("lobby_messages")
+      .insert({ lobby_code: state.lobbyCode, author_id: state.currentPlayerId, message });
+    if (error) {
+      showStatus(`Nachricht konnte nicht gesendet werden (${error.code || "Supabase"}): ${error.message}`);
+      return;
+    }
+    state.detectiveMessage = message;
+    renderPrivateRoleCard();
+    return;
+  }
+  if (!state.round) return;
+  state.round.detectiveMessage = message;
   saveRound();
-  await syncToSupabase();
   renderPrivateRoleCard();
 });
 
@@ -836,7 +885,7 @@ function getPlayerRoleInfo(playerId, round) {
     return {
       key: "impostor",
       label: "Impostor",
-      message: [sharedRoleText, `Dein Hilfswort: ${round.impostorClues[playerId] || "???"}`, `Mitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== playerId)) || "Keine"}`].filter(Boolean).join("\n"),
+      message: [sharedRoleText, `Deine Hilfswörter: ${round.impostorClues[playerId] || "???"}`, `Mitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== playerId)) || "Keine"}`].filter(Boolean).join("\n"),
     };
   }
 
@@ -872,9 +921,9 @@ function getPlayerRoleInfo(playerId, round) {
   };
 }
 
-function getSharedRoleText(round) {
+function getSharedRoleText(round, players = state.players, settings = state.settings) {
   const detectiveNames = getNamesForIds(round.detectives);
-  const availableItems = detectiveItems.filter((item) => item.minPlayers <= state.players.length);
+  const availableItems = detectiveItems.filter((item) => item.minPlayers <= players.length);
   const itemList = availableItems.map((item) => `${item.name}: ${item.description}`).join("\n- ") || "Keine Items";
   const jesterText = round.jesters.length > 0 ? `Jester: ${round.jesters.length} dabei` : "";
 
@@ -882,19 +931,20 @@ function getSharedRoleText(round) {
     `Impostoren: ${round.impostors.length}`,
     jesterText,
     `Detektiv${round.detectives.length === 1 ? "" : "en"}: ${detectiveNames}`,
-    round.detectives.length ? `Detektiv-Items zur Auswahl (nutzbar: ${state.settings.itemsPerDetective} pro Detektiv):\n- ${itemList}` : "",
+    round.detectives.length ? `Detektiv-Items zur Auswahl (nutzbar: ${settings.itemsPerDetective} pro Detektiv):\n- ${itemList}` : "",
     `Doppelgänger dabei: ${round.doppelgangers.length > 0 ? "Ja" : "Nein"}`,
   ].filter(Boolean).join("\n");
 }
 
-function buildRoleMap(round) {
+function buildRolePayloads(round, players, settings) {
   const result = {};
+  const sharedRoleText = getSharedRoleText(round, players, settings);
 
   round.impostors.forEach((id) => {
     result[id] = {
       key: "impostor",
       label: "Impostor",
-      message: `Dein Hilfswort: ${round.impostorClues[id] || "???"}\nMitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== id)) || "Keine"}`,
+      message: [sharedRoleText, `Deine Hilfswörter: ${round.impostorClues[id] || "???"}`, `Mitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== id)) || "Keine"}`].filter(Boolean).join("\n"),
     };
   });
 
@@ -902,7 +952,7 @@ function buildRoleMap(round) {
     result[id] = {
       key: "jester",
       label: "Jester",
-      message: "Ziel: Lass dich rausvoten!",
+      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, "Ziel: Lass dich rausvoten!"].filter(Boolean).join("\n"),
     };
   });
 
@@ -911,7 +961,7 @@ function buildRoleMap(round) {
     result[id] = {
       key: "detective",
       label: "Detektiv",
-      message: `Du kennst das Wort: ${round.word}\nItems:\n- ${items.join("\n- ") || "Keine Items"}`,
+      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, `Deine Items:\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
     };
   });
 
@@ -919,16 +969,16 @@ function buildRoleMap(round) {
     result[id] = {
       key: "doppelganger",
       label: "Doppelgänger",
-      message: "Du bist nur ein zufälliger Mitspieler.",
+      message: "Du bist der Doppelgänger. Du erhältst keine weiteren Informationen.",
     };
   });
 
-  state.players.forEach((player) => {
+  players.forEach((player) => {
     if (!result[player.id]) {
       result[player.id] = {
         key: "player",
         label: "Spieler",
-        message: "Du hast keine geheime Info.",
+        message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`].filter(Boolean).join("\n"),
       };
     }
   });
@@ -943,21 +993,22 @@ function getNamesForIds(ids) {
     .join(", ") || "Keine";
 }
 
-function createGameRound(players, settings) {
+function createGameRound(players, settings, roleCounts) {
   const word = selectGameWord();
   const shuffledPlayers = shuffle([...players]);
 
-  const aJester = calculateRoleCount(settings.jesterCount, settings.jesterProbability, settings.jesterRandomEnabled);
-  const aDetective = calculateRoleCount(settings.detectiveCount, settings.detectiveProbability, settings.detectiveRandomEnabled);
-  const aDoppel = calculateRoleCount(settings.doppelgangerCount, settings.doppelgangerProbability, settings.doppelgangerRandomEnabled);
+  const counts = roleCounts || computeRoleCounts(settings);
+  const aJester = counts.jesters;
+  const aDetective = counts.detectives;
+  const aDoppel = counts.doppelgangers;
 
-  const minimumPlayers = settings.impostorCount + aJester + aDetective + aDoppel + 1;
+  const minimumPlayers = counts.total + 1;
   if (players.length < minimumPlayers) {
     throw new Error("Nicht genügend Spieler für diese Rollenverteilung.");
   }
 
-  const impostors = shuffledPlayers.slice(0, settings.impostorCount).map((player) => player.id);
-  const remaining = shuffledPlayers.slice(settings.impostorCount);
+  const impostors = shuffledPlayers.slice(0, counts.impostors).map((player) => player.id);
+  const remaining = shuffledPlayers.slice(counts.impostors);
 
   const jesters = remaining.slice(0, aJester).map((player) => player.id);
   const remainingAfterJester = remaining.slice(aJester);
@@ -968,10 +1019,12 @@ function createGameRound(players, settings) {
   const doppelgangers = remainingAfterDetective.slice(0, aDoppel).map((player) => player.id);
 
   const impostorClues = {};
-  const availableClues = shuffle([...word.clues]);
-  impostors.forEach((impostorId, index) => {
-    const cluePool = availableClues.slice(index, index + 1);
-    impostorClues[impostorId] = cluePool[0] || availableClues[0] || "???";
+  // Alle Impostoren sehen exakt dieselbe Hinweiswort-Menge (so viele wie Impostoren im Spiel sind).
+  const clueCount = Math.min(impostors.length, word.clues.length);
+  const sharedClues = shuffle([...word.clues]).slice(0, clueCount);
+  const clueText = sharedClues.length ? sharedClues.join(", ") : "???";
+  impostors.forEach((impostorId) => {
+    impostorClues[impostorId] = clueText;
   });
 
   const detectiveItemsMap = {};
@@ -1008,6 +1061,16 @@ function calculateRoleCount(baseCount, probability, randomEnabled) {
   return count;
 }
 
+// Einmal berechnet und sowohl für den Start-Guard als auch für die Runde selbst verwendet,
+// damit Prüfung und tatsächliche Rollenverteilung nie auseinanderlaufen.
+function computeRoleCounts(settings) {
+  const impostors = Math.max(0, Number(settings.impostorCount) || 0);
+  const jesters = calculateRoleCount(settings.jesterCount, settings.jesterProbability, settings.jesterRandomEnabled);
+  const detectives = calculateRoleCount(settings.detectiveCount, settings.detectiveProbability, settings.detectiveRandomEnabled);
+  const doppelgangers = calculateRoleCount(settings.doppelgangerCount, settings.doppelgangerProbability, settings.doppelgangerRandomEnabled);
+  return { impostors, jesters, detectives, doppelgangers, total: impostors + jesters + detectives + doppelgangers };
+}
+
 function selectGameWord() {
   const difficulty = state.settings?.difficulty || "random";
   const activeDeck = difficulty === "random"
@@ -1030,8 +1093,15 @@ function shuffle(items) {
   return copy;
 }
 
+const LOBBY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const LOBBY_CODE_REGEX = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{5}$/;
+
+function isValidLobbyCode(code) {
+  return typeof code === "string" && LOBBY_CODE_REGEX.test(code);
+}
+
 function generateLobbyCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const chars = LOBBY_CODE_CHARS;
   let code = "";
   for (let i = 0; i < 5; i += 1) {
     code += chars[Math.floor(Math.random() * chars.length)];
@@ -1072,12 +1142,27 @@ async function initSupabase() {
 
     supabaseClient = window.supabase.createClient(
       window.SUPABASE_CONFIG.url,
-      window.SUPABASE_CONFIG.anonKey
+      window.SUPABASE_CONFIG.anonKey,
+      { auth: { storage: window.sessionStorage } }
     );
 
+    // Identität über eine anonyme Auth-Session (Gerät = Spieler). Nur so kann RLS
+    // Rollendaten pro Spieler abschotten – eine statische Seite braucht dafür Auth.
+    let { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
+      if (error) {
+        console.warn("Anonymous sign-in failed:", error.message);
+        showStatus("Multiplayer: Anonymous Sign-In ist in Supabase nicht aktiviert (Auth → Providers → Anonymous).");
+        return false;
+      }
+      user = data.user;
+    }
+    state.supabaseUserId = user.id;
     return true;
   } catch (error) {
     console.warn("Supabase init failed:", error);
+    state.supabaseUserId = null;
     return false;
   }
 }
@@ -1104,8 +1189,9 @@ async function loadLobby(code) {
   return {
     players: (playersResult.data || []).map((player) => ({ id: player.player_id, name: player.name })),
     settings: { ...defaultSettings, ...settings },
-    hostId: settings._hostId || playersResult.data?.[0]?.player_id || null,
-    round: data.round || null,
+    hostId: data.host_id || playersResult.data?.[0]?.player_id || null,
+    round: data.round || null, // nur im lokalen Modus befüllt; sonst kommen Rollen über player_rounds
+    roundId: data.round_id || null,
   };
 }
 
@@ -1138,29 +1224,112 @@ function subscribeToLobby() {
       if (!row) return;
       const settings = row.settings || {};
       state.settings = { ...defaultSettings, ...settings };
-      state.hostId = settings._hostId || state.hostId;
+      state.hostId = row.host_id || state.hostId;
       state.isHost = state.hostId === state.currentPlayerId;
-      state.round = row.round || null;
+      state.roundIdFromServer = row.round_id || null;
+      if (row.round_id) {
+        if (!state.rolePayload) loadOwnRolePayload(row.round_id);
+      } else if (!state.round) {
+        state.rolePayload = null;
+      }
       render();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "lobby_players", filter: `lobby_code=eq.${state.lobbyCode}` }, () => {
       refreshLobbyPlayers();
     })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "player_rounds", filter: `player_id=eq.${state.currentPlayerId}` }, (payload) => {
+      if (!payload.new || !payload.new.payload) return;
+      state.rolePayload = payload.new.payload;
+      render();
+    })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "lobby_messages", filter: `lobby_code=eq.${state.lobbyCode}` }, (payload) => {
+      if (!payload.new || !payload.new.message) return;
+      state.detectiveMessage = payload.new.message;
+      renderPrivateRoleCard();
+    })
     .subscribe();
 
   state.lobbyPollTimer = setInterval(() => {
     refreshLobbyPlayers();
+    refreshGameState();
   }, 3000);
+}
+
+// Fallback-Polling für verlorene Realtime-Verbindungen: holt zusätzlich den
+// Spielzustand (Settings, Host, Rundenstart), nicht nur die Spielerliste.
+async function refreshGameState() {
+  if (!state.lobbyCode) return;
+  const { data, error } = await supabaseClient
+    .from("game_state")
+    .select("id, host_id, settings, round_id")
+    .eq("id", state.lobbyCode)
+    .maybeSingle();
+  if (error) {
+    console.warn("Game state read failed:", error);
+    return;
+  }
+  if (!data) return;
+  const settings = data.settings || {};
+  state.settings = { ...defaultSettings, ...settings };
+  state.hostId = data.host_id || state.hostId;
+  state.isHost = state.hostId === state.currentPlayerId;
+  const roundId = data.round_id || null;
+  if (roundId && roundId !== state.roundIdFromServer && !state.rolePayload) {
+    await loadOwnRolePayload(roundId);
+  } else if (!roundId && !state.round) {
+    state.rolePayload = null;
+  }
+  state.roundIdFromServer = roundId;
+  render();
+}
+
+// Holt ausschließlich die eigene Rollen-Zeile (RLS erlaubt nur die eigene).
+async function loadOwnRolePayload(roundId) {
+  if (!roundId || !state.currentPlayerId) return;
+  const { data, error } = await supabaseClient
+    .from("player_rounds")
+    .select("payload")
+    .eq("lobby_code", state.lobbyCode)
+    .eq("player_id", state.currentPlayerId)
+    .eq("round_id", roundId)
+    .maybeSingle();
+  if (error) {
+    console.warn("Own role payload read failed:", error);
+    return;
+  }
+  if (data && data.payload) {
+    state.rolePayload = data.payload;
+    state.syncedRoundId = roundId;
+    render();
+  }
+}
+
+async function loadLatestDetectiveMessage() {
+  if (!supabaseReady || !state.lobbyCode) return;
+  const { data, error } = await supabaseClient
+    .from("lobby_messages")
+    .select("message")
+    .eq("lobby_code", state.lobbyCode)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.warn("Detective message read failed:", error);
+    return;
+  }
+  if (data && data.message) state.detectiveMessage = data.message;
 }
 
 async function syncToSupabase() {
   if (!supabaseReady || !supabaseClient || !state.lobbyCode) return true;
 
   try {
+    const hasRound = Boolean(state.round);
     const payload = {
       id: state.lobbyCode,
-      settings: { ...state.settings, _hostId: state.hostId, _lobbyCode: state.lobbyCode },
-      round: state.round,
+      host_id: state.hostId,
+      settings: state.settings,
+      round_id: hasRound ? state.round.id : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -1171,12 +1340,50 @@ async function syncToSupabase() {
     if (error) {
       throw new Error(`Lobby konnte nicht gespeichert werden (${error.code || "Supabase"}): ${error.message}`);
     }
+
+    if (hasRound && state.syncedRoundId !== state.round.id) {
+      await publishRolePayloads(state.round);
+    }
+
+    if (!hasRound && state.syncedRoundId) {
+      await supabaseClient.from("player_rounds").delete().eq("lobby_code", state.lobbyCode);
+      await supabaseClient.from("lobby_messages").delete().eq("lobby_code", state.lobbyCode);
+      state.rolePayload = null;
+      state.syncedRoundId = null;
+    }
+
     return true;
   } catch (error) {
     console.warn("Supabase sync failed:", error);
     showStatus(error.message || "Lobby konnte nicht gespeichert werden.");
     return false;
   }
+}
+
+// Der Host verteilt pro Spieler NUR dessen eigene Rolle. Das geheime Wort, die
+// komplette Rollenzuordnung und die Impostor-Hilfswörter verlassen den Host nie als Ganzes.
+async function publishRolePayloads(round) {
+  const rolePayloads = buildRolePayloads(round, state.players, state.settings);
+  const rows = state.players.map((player) => ({
+    lobby_code: state.lobbyCode,
+    player_id: player.id,
+    round_id: round.id,
+    payload: rolePayloads[player.id] || { key: "player", label: "Spieler", message: "Du hast keine geheime Info." },
+  }));
+
+  // Alte Runden-Zeilen der Lobby zuerst entfernen, damit nichts Altlastiges übrig bleibt.
+  await supabaseClient.from("player_rounds").delete().eq("lobby_code", state.lobbyCode);
+
+  const { error } = await supabaseClient
+    .from("player_rounds")
+    .upsert(rows, { onConflict: "lobby_code,player_id,round_id" });
+
+  if (error) {
+    throw new Error(`Rollen konnten nicht verteilt werden (${error.code || "Supabase"}): ${error.message}`);
+  }
+
+  state.rolePayload = rolePayloads[state.currentPlayerId] || null;
+  state.syncedRoundId = round.id;
 }
 
 if ("serviceWorker" in navigator) {
