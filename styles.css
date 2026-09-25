@@ -15,6 +15,191 @@
   --radius: 18px;
 }
 
+body[data-theme="meme"] {
+  --bg: #130d21;
+  --panel: #1c1030;
+  --panel-alt: #2a183f;
+  --card: #2d1a3d;
+  --text: #fdf2ff;
+  --muted: #e5c8ff;
+  --primary: #ff66c4;
+  --primary-strong: #ff3ebd;
+  --green: #7ef7a8;
+  --red: #ff5f7a;
+  --gold: #ffd166;
+  --cyan: #6ee7ff;
+  --shadow: 0 20px 40px rgba(255, 82, 181, 0.18);
+  --radius: 18px;
+
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255, 102, 196, 0.22), transparent 20%),
+    radial-gradient(circle at 80% 15%, rgba(110, 231, 255, 0.18), transparent 18%),
+    radial-gradient(circle at 50% 80%, rgba(255, 209, 102, 0.18), transparent 24%),
+    linear-gradient(135deg, #150d25 0%, #0d1220 40%, #180f29 100%);
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+body[data-theme="meme"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 2px,
+      transparent 2px,
+      transparent 5px
+    ),
+    linear-gradient(90deg, transparent, rgba(255, 102, 196, 0.06), transparent);
+  mix-blend-mode: screen;
+}
+
+body[data-theme="meme"] .panel {
+  background: linear-gradient(180deg, rgba(35, 18, 50, 0.95), rgba(19, 12, 30, 0.98));
+  border: 1px solid rgba(255, 102, 196, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 102, 196, 0.08), 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+body[data-theme="meme"] .topbar {
+  align-items: center;
+}
+
+body[data-theme="meme"] h1,
+body[data-theme="meme"] h2,
+body[data-theme="meme"] h3 {
+  color: #fff2ff;
+  text-shadow: 0 0 16px rgba(255, 102, 196, 0.55), 2px 2px 0 rgba(77, 0, 45, 0.65);
+}
+
+body[data-theme="meme"] .eyebrow {
+  color: #ffd166;
+  letter-spacing: 0.16em;
+}
+
+body[data-theme="meme"] .theme-picker select,
+body[data-theme="meme"] .difficulty-box select,
+body[data-theme="meme"] #player-name,
+body[data-theme="meme"] #join-code-input,
+body[data-theme="meme"] input,
+body[data-theme="meme"] textarea,
+body[data-theme="meme"] select {
+  background: rgba(34, 15, 48, 0.9);
+  border: 1px solid rgba(255, 102, 196, 0.4);
+  border-radius: 14px;
+  color: var(--text);
+  box-shadow: inset 0 0 12px rgba(255, 102, 196, 0.08);
+}
+
+body[data-theme="meme"] .primary {
+  background: linear-gradient(135deg, #ff66c4, #ff9f43);
+  box-shadow: 0 0 20px rgba(255, 102, 196, 0.28);
+}
+
+body[data-theme="meme"] .secondary {
+  background: rgba(110, 231, 255, 0.1);
+  border: 1px solid rgba(110, 231, 255, 0.4);
+}
+
+body[data-theme="meme"] .ghost {
+  background: rgba(255, 209, 102, 0.08);
+  border: 1px solid rgba(255, 209, 102, 0.28);
+}
+
+body[data-theme="meme"] .player-tag {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 102, 196, 0.28);
+  transform: rotate(-1deg);
+}
+
+body[data-theme="meme"] .player-tag:nth-child(even) {
+  transform: rotate(1deg);
+}
+
+body[data-theme="meme"] .player-tag.is-you {
+  background: rgba(110, 231, 255, 0.08);
+  border-color: rgba(110, 231, 255, 0.6);
+  box-shadow: 0 0 18px rgba(110, 231, 255, 0.15);
+}
+
+body[data-theme="meme"] .counter-box,
+body[data-theme="meme"] .private-role-card,
+body[data-theme="meme"] .difficulty-box,
+body[data-theme="meme"] .detective-chat-bubble {
+  background: linear-gradient(180deg, rgba(55, 25, 72, 0.96), rgba(24, 16, 35, 0.96));
+  border: 1px solid rgba(255, 102, 196, 0.2);
+  box-shadow: inset 0 0 16px rgba(255, 102, 196, 0.04);
+}
+
+body[data-theme="meme"] .role-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 16px rgba(255, 102, 196, 0.12);
+}
+
+body[data-theme="meme"] .role-impostor {
+  background: rgba(255, 95, 122, 0.12);
+  border-color: rgba(255, 95, 122, 0.45);
+}
+
+body[data-theme="meme"] .role-jester {
+  background: rgba(255, 209, 102, 0.12);
+  border-color: rgba(255, 209, 102, 0.45);
+}
+
+body[data-theme="meme"] .role-detective {
+  background: rgba(110, 231, 255, 0.12);
+  border-color: rgba(110, 231, 255, 0.45);
+}
+
+body[data-theme="meme"] .role-doppelganger {
+  background: rgba(175, 124, 255, 0.12);
+  border-color: rgba(175, 124, 255, 0.45);
+}
+
+body[data-theme="meme"] .host-mini,
+body[data-theme="meme"] .host-badge,
+body[data-theme="meme"] .round-live,
+body[data-theme="meme"] .chat-label,
+body[data-theme="meme"] .lobby-code,
+body[data-theme="meme"] .panel-count {
+  color: #6ee7ff;
+  text-shadow: 0 0 12px rgba(110, 231, 255, 0.45);
+}
+
+body[data-theme="meme"] .counter button {
+  background: rgba(255, 102, 196, 0.12);
+  border: 1px solid rgba(255, 102, 196, 0.28);
+}
+
+body[data-theme="meme"] .player-tag button {
+  background: rgba(255, 95, 122, 0.12);
+  border: 1px solid rgba(255, 95, 122, 0.38);
+}
+
+body[data-theme="meme"] .rules-btn {
+  font-weight: 800;
+}
+
+body[data-theme="meme"] .rules-btn,
+body[data-theme="meme"] .primary,
+body[data-theme="meme"] .secondary,
+body[data-theme="meme"] .ghost,
+body[data-theme="meme"] .counter button {
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+body[data-theme="meme"] .rules-btn:hover,
+body[data-theme="meme"] .primary:hover,
+body[data-theme="meme"] .secondary:hover,
+body[data-theme="meme"] .ghost:hover,
+body[data-theme="meme"] .counter button:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 0 18px rgba(255, 102, 196, 0.18);
+}
+
 body[data-theme="classic"] {
   --bg: #061014;
   --panel: #0d1518;

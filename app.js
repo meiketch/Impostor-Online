@@ -88,6 +88,7 @@ const rulesHtml = `
   <h3>3. Jester</h3>
   <p>Der Jester kennt das geheime Wort. Er möchte jedoch <strong>eliminiert werden</strong>.</p>
   <p>Der Jester gewinnt sofort, sobald er aus dem Spiel entfernt wird – unabhängig davon, wodurch dies geschieht.</p>
+  <p>Die Identität des Jesters bleibt geheim. Beim Spielstart erfahren alle Spieler außer den Doppelgängern, wie viele Jester in der Runde dabei sind.</p>
   <p>Er kennt das geheime Wort, die Anzahl der Impostoren, der Jester, ob Doppelgänger im Spiel sind und wer der Detektiv ist, aber nicht die anderen Jester.</p>
   <p>Der Jester ist von fast allen normalen Beschreibungsregeln befreit und darf bewusst verdächtig oder provozierend wirken. Die allgemeine Regel gegen das direkte Nennen oder Verwenden des Zielwortes bleibt bestehen.</p>
 
@@ -463,13 +464,14 @@ function bindEvents() {
 }
 
 function initializeTheme() {
-  const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) || "neon";
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) || "meme";
   applyTheme(savedTheme);
   document.getElementById("theme-select").value = savedTheme;
 }
 
 function applyTheme(theme) {
-  const selectedTheme = ["classic", "crt", "bsod", "cork"].includes(theme) ? theme : "neon";
+  const validThemes = ["meme", "neon", "classic", "crt", "bsod", "cork"];
+  const selectedTheme = validThemes.includes(theme) ? theme : "meme";
   document.body.dataset.theme = selectedTheme;
   const selector = document.getElementById("theme-select");
   if (selector) selector.value = selectedTheme;
@@ -829,13 +831,12 @@ function renderRoundSummary() {
 }
 
 function getPlayerRoleInfo(playerId, round) {
-  const detectiveText = getDetectiveText(round);
-  const itemsText = getDetectiveItemsText(round);
+  const sharedRoleText = getSharedRoleText(round);
   if (round.impostors.includes(playerId)) {
     return {
       key: "impostor",
       label: "Impostor",
-      message: [`Dein Hilfswort: ${round.impostorClues[playerId] || "???"}`, detectiveText, `Mitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== playerId)) || "Keine"}`, itemsText].filter(Boolean).join("\n"),
+      message: [sharedRoleText, `Dein Hilfswort: ${round.impostorClues[playerId] || "???"}`, `Mitspieler: ${getNamesForIds(round.impostors.filter((x) => x !== playerId)) || "Keine"}`].filter(Boolean).join("\n"),
     };
   }
 
@@ -843,7 +844,7 @@ function getPlayerRoleInfo(playerId, round) {
     return {
       key: "jester",
       label: "Jester",
-      message: [`Gesuchtes Wort: ${round.word}`, detectiveText, "Ziel: Lass dich rausvoten!", itemsText].filter(Boolean).join("\n"),
+      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, "Ziel: Lass dich rausvoten!"].filter(Boolean).join("\n"),
     };
   }
 
@@ -852,7 +853,7 @@ function getPlayerRoleInfo(playerId, round) {
     return {
       key: "detective",
       label: "Detektiv",
-      message: [`Gesuchtes Wort: ${round.word}`, detectiveText, `Deine Items:\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
+      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, `Deine Items:\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
     };
   }
 
@@ -860,35 +861,30 @@ function getPlayerRoleInfo(playerId, round) {
     return {
       key: "doppelganger",
       label: "Doppelgänger",
-      message: [`Gesuchtes Wort: ${round.word}`, detectiveText, "Du bist nur ein zufälliger Mitspieler.", itemsText].filter(Boolean).join("\n"),
+      message: "Du bist der Doppelgänger. Du erhältst keine weiteren Informationen.",
     };
   }
 
   return {
     key: "player",
     label: "Spieler",
-    message: [`Gesuchtes Wort: ${round.word}`, detectiveText, itemsText].filter(Boolean).join("\n"),
+    message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`].filter(Boolean).join("\n"),
   };
 }
 
-function getDetectiveName(round) {
-  const detectiveId = round.detectives[0];
-  return state.players.find((player) => player.id === detectiveId)?.name || "";
-}
+function getSharedRoleText(round) {
+  const detectiveNames = getNamesForIds(round.detectives);
+  const availableItems = detectiveItems.filter((item) => item.minPlayers <= state.players.length);
+  const itemList = availableItems.map((item) => `${item.name}: ${item.description}`).join("\n- ") || "Keine Items";
+  const jesterText = round.jesters.length > 0 ? `Jester: ${round.jesters.length} dabei` : "";
 
-function getDetectiveText(round) {
-  const name = getDetectiveName(round);
-  return name ? `Detektiv: ${name}` : "";
-}
-
-function getDetectiveItemsText(round) {
-  if (!round.detectives.length) return "";
-  return `Detektiv-Items:\n- ${getDetectiveItems(round)}`;
-}
-
-function getDetectiveItems(round) {
-  const items = Object.values(round.detectiveItemsMap || {}).flat();
-  return items.join("\n- ") || "Keine Items";
+  return [
+    `Impostoren: ${round.impostors.length}`,
+    jesterText,
+    `Detektiv${round.detectives.length === 1 ? "" : "en"}: ${detectiveNames}`,
+    round.detectives.length ? `Detektiv-Items zur Auswahl (nutzbar: ${state.settings.itemsPerDetective} pro Detektiv):\n- ${itemList}` : "",
+    `Doppelgänger dabei: ${round.doppelgangers.length > 0 ? "Ja" : "Nein"}`,
+  ].filter(Boolean).join("\n");
 }
 
 function buildRoleMap(round) {
