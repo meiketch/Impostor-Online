@@ -405,7 +405,6 @@ function bindEvents() {
       state.round = createGameRound(state.players, state.settings, roleCounts);
       saveRound();
       render();
-      await syncToSupabase();
     } catch (error) {
       showStatus(error.message);
     }
