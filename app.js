@@ -12,6 +12,7 @@ const defaultSettings = {
   detectiveCount: 0,
   itemsPerDetective: 1,
   doppelgangerCount: 0,
+  difficulty: "random",
   jesterProbability: 25,
   detectiveProbability: 25,
   doppelgangerProbability: 0,
@@ -35,6 +36,156 @@ const detectiveItems = [
   { name: "🔫 Goldene Pistole", description: "Der DT trifft einen Impostor direkt. Kein Impostor = Schütze scheidet aus.", minPlayers: 8 },
 ];
 
+const rulesHtml = `
+  <h2>IMPOSTOR</h2>
+  <h3>Das Partyspiel um Bluff, Misstrauen und Chaos</h3>
+
+  <h3>1. Spielidee</h3>
+  <p>Bei <strong>IMPOSTOR</strong> kennen die meisten Spieler ein geheimes Wort. Sie müssen es beschreiben, ohne das Wort selbst zu nennen oder zu offensichtlich zu verraten.</p>
+  <p>Doch nicht jeder kennt das Wort:</p>
+  <ul>
+    <li>Die <strong>Impostoren</strong> kennen das Wort nicht und müssen es anhand von Hinweisen herausfinden.</li>
+    <li>Der <strong>Jester</strong> kennt das Wort und möchte absichtlich aus dem Spiel fliegen.</li>
+    <li>Der <strong>Doppelgänger</strong> verfolgt kein eigenes Teamziel, sondern gewinnt mit der Partei, die das Spiel gewinnt – solange er selbst nicht eliminiert wurde.</li>
+    <li>Der <strong>Detektiv</strong> kennt das Wort und ist eine öffentlich bekannte Sonderrolle.</li>
+  </ul>
+  <p>Durch Beschreibungen, Diskussionen, Lügen, Anschuldigungen und Abstimmungen versuchen die Spieler herauszufinden, wem sie vertrauen können.</p>
+  <p><strong>Bluffen und Lügen sind ausdrücklich Teil des Spiels.</strong></p>
+
+  <h3>2. Rollen</h3>
+  <h4>Normale Spieler</h4>
+  <ul>
+    <li>kennen das geheime Wort,</li>
+    <li>beschreiben es nach den geltenden Regeln,</li>
+    <li>dürfen lügen und bluffen,</li>
+    <li>dürfen andere beschuldigen,</li>
+    <li>dürfen behaupten, eine andere Rolle zu besitzen,</li>
+    <li>gewinnen, wenn die Impostoren ausscheiden und ihre letzte Chance scheitert.</li>
+  </ul>
+
+  <h4>Impostor</h4>
+  <p>Der Impostor kennt das geheime Wort <strong>nicht</strong>.</p>
+  <p>Stattdessen erhält er Hinweise, mit denen er versuchen muss, das Wort herauszufinden.</p>
+  <h5>Mehrere Impostoren</h5>
+  <ul>
+    <li>kennen sie sich gegenseitig,</li>
+    <li>sehen alle exakt dieselben Hinweiswörter,</li>
+    <li>erhalten sie so viele Hinweiswörter wie Impostoren im Spiel sind.</li>
+  </ul>
+  <p>Impostoren dürfen sich <strong>offen</strong> miteinander absprechen.</p>
+  <p>Verboten ist lediglich geheime Kommunikation, beispielsweise private Nachrichten, Chats, Discord oder andere nicht für alle sichtbare Kommunikation.</p>
+  <p>Ein Impostor darf sogar einen anderen Impostor beschuldigen oder gegen ihn stimmen.</p>
+
+  <h4>Das Wort erraten</h4>
+  <p>Ein Impostor darf jederzeit versuchen, das geheime Wort zu erraten.</p>
+  <p>Sobald ein Impostor das exakte Wort oder eine grammatikalisch zulässige Variante davon als <strong>Rateversuch</strong> nennt, gilt das Wort als erraten.</p>
+  <ul>
+    <li><strong>Treffer:</strong> Die Impostoren gewinnen sofort.</li>
+    <li><strong>Falscher Versuch:</strong> Der Impostor bleibt im Spiel, darf aber nicht einfach aufgrund desselben Versuchs erneut raten.</li>
+  </ul>
+  <p>Ein Impostor, der das geheime Wort versehentlich selbst nennt, zählt dies ebenfalls als erfolgreichen Rateversuch.</p>
+
+  <h3>3. Jester</h3>
+  <p>Der Jester kennt das geheime Wort. Er möchte jedoch <strong>eliminiert werden</strong>.</p>
+  <p>Der Jester gewinnt sofort, sobald er aus dem Spiel entfernt wird – unabhängig davon, wodurch dies geschieht.</p>
+  <p>Er kennt das geheime Wort, die Anzahl der Impostoren, der Jester, ob Doppelgänger im Spiel sind und wer der Detektiv ist, aber nicht die anderen Jester.</p>
+  <p>Der Jester ist von fast allen normalen Beschreibungsregeln befreit und darf bewusst verdächtig oder provozierend wirken. Die allgemeine Regel gegen das direkte Nennen oder Verwenden des Zielwortes bleibt bestehen.</p>
+
+  <h3>4. Doppelgänger</h3>
+  <p>Der Doppelgänger ist eine eigenständige geheime Rolle.</p>
+  <p>Er ist kein normaler Spieler, kein Impostor und kein Jester. Er kennt ausschließlich seine eigene Rolle und keine Informationen über das Wort, die Impostoren, den Detektiv oder andere Doppelgänger.</p>
+  <p>Der Doppelgänger gewinnt mit der Partei, die das Spiel gewinnt, solange er selbst nicht eliminiert wurde.</p>
+  <p>Wird er vor dem Spielende herausgewählt oder entfernt, verliert er unabhängig davon, wer anschließend gewinnt.</p>
+
+  <h3>5. Detektiv</h3>
+  <p>Der Detektiv ist eine <strong>öffentliche Rolle</strong>.</p>
+  <p>Alle Spieler wissen, wer der Detektiv ist. Er kennt das geheime Wort, die Anzahl der Impostoren, die Anzahl der Jester, ob Doppelgänger im Spiel sind und seine eigene Rolle. Er beschreibt das Wort grundsätzlich wie ein normaler Spieler.</p>
+  <p>Der Detektiv ist grundsätzlich <strong>nicht stimmberechtigt</strong>.</p>
+
+  <h3>6. Detektiv-Items</h3>
+  <p>Der Detektiv erhält eine Auswahl verschiedener Items. Alle Spieler wissen, welche Items grundsätzlich verfügbar sind, wie viele dazu gehören und wie viele der Detektiv verwenden kann.</p>
+  <p>Ein verwendetes Item ist verbraucht. Bestimmte Items können an andere Spieler weitergegeben werden; der Besitzer entscheidet anschließend selbst, was damit geschieht.</p>
+  <p>Wird der Detektiv eliminiert, wird ein Detektiv-Item, das sich noch beim Detektiv befindet, deaktiviert, sofern es über das gesamte Spiel hinweg aktiv war. Bereits weitergegebene Items verfallen nicht.</p>
+
+  <h3>7. Beschreibungen</h3>
+  <p>In jeder Runde sagt jeder lebende Spieler einmal etwas zum geheimen Wort.</p>
+  <p>Eine normale Beschreibung besteht grundsätzlich aus <strong>einem Wort</strong>; bis zu <strong>drei Wörter</strong> sind erlaubt, wenn sie zusammen eine sinnvolle kurze Wortgruppe bilden.</p>
+  <p>Verboten sind das geheime Wort selbst, Bestandteile des Zielwortes, Teile bzw. Wortstämme, zusammengesetzte Wörter mit verbotenen Bestandteilen, Übersetzungen, einzelne Buchstaben, Silben, Aussagen wie „Der erste Teil des Wortes ist …“, allgemeine Synonyme und grammatikalische Varianten des Zielwortes.</p>
+  <p><strong>Fair Play:</strong> Das Spiel lebt davon, dass die Spieler clever beschreiben, ohne die Regeln auszutricksen.</p>
+
+  <h3>8. Bluffen und Lügen</h3>
+  <p><strong>IMPOSTOR</strong> ist ausdrücklich ein Spiel mit Täuschung.</p>
+  <p>Spieler dürfen über ihre Informationen lügen. Sie dürfen beispielsweise behaupten, der Detektiv zu sein, das Wort zu kennen, Impostor zu sein, jemanden zu verdächtigen oder ein Item benutzt zu haben.</p>
+  <p>Nicht erlaubt ist es, Informationen zu verwenden, die ein Spieler ausschließlich durch einen Blick hinter die technische Umsetzung des Spiels erhält, etwa aus Quellcode, internen Spieldaten, Debug-Informationen oder ähnlichen technischen Quellen.</p>
+
+  <h3>9. Rundenablauf</h3>
+  <p>Die erste Runde beginnt bei einem beliebigen Spieler. Danach geht es der Reihe nach weiter.</p>
+  <p>Beispiel: A → B → C → D → A → B …</p>
+  <p>Wird B eliminiert, wird daraus: A → C → D → A → C …</p>
+  <p>Jeder lebende Spieler ist einmal pro Runde an der Reihe. Eine Runde endet, sobald alle noch lebenden Spieler einmal an der Reihe waren.</p>
+
+  <h3>10. Abstimmungen</h3>
+  <p>Eine Abstimmung kann von <strong>jedem stimmberechtigten Spieler jederzeit</strong> ausgelöst werden.</p>
+  <p>Der Spieler, der die Abstimmung startet, kann seine Anschuldigung erklären. Danach darf die Gruppe diskutieren. Die beschuldigte Person erhält die Möglichkeit, sich kurz zu verteidigen. Anschließend wird offen abgestimmt.</p>
+  <p>Stimmberechtigt sind grundsätzlich normale Spieler, Impostoren, Jester und Doppelgänger. Der Detektiv ist grundsätzlich nicht stimmberechtigt.</p>
+  <p>Eine Person wird nur eliminiert, wenn sie <strong>mehr als 50 % der gesamten stimmberechtigten Spieler</strong> auf sich vereint. Es reicht also nicht, genau die Hälfte der Stimmen zu bekommen.</p>
+  <p>Erreicht niemand eine echte Mehrheit, wird niemand eliminiert.</p>
+
+  <h3>11. Sonderregel: Drei erfolglose Abstimmungen</h3>
+  <p>Um zu verhindern, dass eine Gruppe das Spiel durch endlose Pattsituationen blockiert, gilt:</p>
+  <p><strong>Sobald mindestens 4 Spieler leben und drei Abstimmungen hintereinander erfolglos geblieben sind, muss anschließend ein Spieler ausscheiden.</strong></p>
+  <p>Wenn sich die Spieler nach der dritten erfolglosen Abstimmung <strong>nicht</strong> darauf einigen können, wer ausscheidet, wird derjenige eliminiert, der die erste der drei erfolglosen Abstimmungen gestartet hat.</p>
+
+  <h3>12. Ausscheiden</h3>
+  <p>Wird ein Spieler eliminiert, wird seine tatsächliche Rolle aufgedeckt. Bis zu diesem Zeitpunkt darf der Spieler gelogen haben.</p>
+  <p>Ein ausgeschiedener Impostor erhält <strong>genau einen letzten Rateversuch</strong>, wenn er durch Abstimmung eliminiert wurde.</p>
+  <ul>
+    <li><strong>Richtig:</strong> Das gesamte Impostor-Team gewinnt sofort.</li>
+    <li><strong>Falsch:</strong> Der Impostor ist endgültig ausgeschieden.</li>
+  </ul>
+  <p>Bleibt nach einem falschen letzten Rateversuch kein lebender Impostor mehr übrig, gewinnen die normalen Spieler. Bleibt mindestens ein anderer Impostor am Leben, wird weitergespielt.</p>
+  <p>Der Jester gewinnt sofort, sobald er eliminiert wird. Der Doppelgänger verliert, wenn er eliminiert wird. Der Detektiv verliert und scheidet aus.</p>
+
+  <h3>13. Die Impostor-Mehrheitsregel</h3>
+  <p>Das Spiel endet für die Impostoren, sobald eine Abstimmung gegen sie faktisch nicht mehr sinnvoll möglich ist.</p>
+  <p>Die Impostoren gewinnen sofort, wenn:</p>
+  <p><strong>Anzahl lebender Impostoren ≥ Anzahl relevanter lebender Gegenspieler</strong></p>
+  <p>Grundsätzlich zählen normale Spieler, Jester und Doppelgänger. Der Detektiv zählt niemals für diese Berechnung.</p>
+  <p><strong>Sonderregel für den Jester:</strong> Solange mindestens 4 Spieler leben, zählt der Jester als Gegenspieler. Sobald weniger als 4 Spieler leben, zählt der Jester nicht mehr. Der Doppelgänger zählt immer.</p>
+
+  <h3>14. Siegbedingungen</h3>
+  <h4>Normale Spieler</h4>
+  <p>Die normalen Spieler gewinnen, wenn:</p>
+  <ul>
+    <li>kein Impostor mehr lebt,</li>
+    <li>und ein ausgeschiedener letzter Impostor seinen finalen Rateversuch falsch abgegeben hat.</li>
+  </ul>
+
+  <h4>Impostoren</h4>
+  <p>Die Impostoren gewinnen, wenn:</p>
+  <ol>
+    <li>ein Impostor das geheime Wort korrekt errät,</li>
+    <li>ein ausgeschiedener Impostor seinen letzten Rateversuch korrekt abgibt,</li>
+    <li>die Impostor-Mehrheitsregel erreicht wird.</li>
+  </ol>
+
+  <h4>Jester</h4>
+  <p>Der Jester gewinnt, sobald er eliminiert wird.</p>
+
+  <h4>Doppelgänger</h4>
+  <p>Der Doppelgänger gewinnt mit der Partei, die das Spiel gewinnt, solange er selbst nicht eliminiert wurde.</p>
+
+  <h3>15. Rollenverteilung</h3>
+  <p>Die genaue Rollenverteilung kann an die Größe der Gruppe angepasst werden. Mehrere Sonderrollen können gleichzeitig vorhanden sein, sofern die Spielerzahl dies sinnvoll zulässt.</p>
+  <p>Mehrere Jester oder mehrere Doppelgänger sind möglich. Mehrere Doppelgänger kennen sich nicht.</p>
+
+  <h3>16. Grundprinzip des Spiels</h3>
+  <p>IMPOSTOR funktioniert am besten, wenn die Spieler ihre Informationen nicht nur logisch, sondern auch sozial bewerten.</p>
+  <p>Ein Spieler darf überzeugend lügen, völlig falsche Anschuldigungen machen, sich absichtlich verdächtig verhalten, andere gegeneinander ausspielen, einen Mitspieler verteidigen, einen Verbündeten beschuldigen, sich als andere Rolle ausgeben oder bewusst Chaos verursachen.</p>
+  <p>Solange die Regeln eingehalten werden, ist <strong>Täuschung kein Regelbruch, sondern Teil des Spiels</strong>.</p>
+  <p>Das Ziel ist nicht, möglichst ordentlich zu spielen. Das Ziel ist, die anderen davon zu überzeugen, dass <strong>du recht hast</strong>.</p>
+`;
+
 const state = {
   lobbyCode: null,
   currentPlayerId: sessionStorage.getItem("impostor-player-id") || null,
@@ -44,6 +195,12 @@ const state = {
   settings: { ...defaultSettings },
   round: null,
   wordDeck: [],
+  wordDeckByDifficulty: {
+    easy: [],
+    medium: [],
+    hard: [],
+    veryHard: [],
+  },
   detectiveMessage: "",
   statusMessage: "",
   lobbyPollTimer: null,
@@ -108,9 +265,46 @@ window.addEventListener("storage", (event) => {
 });
 
 function bindEvents() {
+  const rulesModal = document.getElementById("rules-modal");
+  const rulesContent = document.getElementById("rules-content");
+
   document.getElementById("theme-select").addEventListener("change", (event) => {
     applyTheme(event.target.value);
     localStorage.setItem(STORAGE_KEYS.theme, event.target.value);
+  });
+
+  document.getElementById("rules-btn").addEventListener("click", () => {
+    if (!rulesContent) return;
+    rulesContent.innerHTML = rulesHtml;
+    if (rulesModal) {
+      rulesModal.classList.remove("hidden");
+      rulesModal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+  });
+
+  document.getElementById("close-rules-btn").addEventListener("click", () => {
+    if (!rulesModal) return;
+    rulesModal.classList.add("hidden");
+    rulesModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  });
+
+  document.querySelectorAll("[data-close]").forEach((element) => {
+    element.addEventListener("click", () => {
+      if (!rulesModal) return;
+      rulesModal.classList.add("hidden");
+      rulesModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && rulesModal && !rulesModal.classList.contains("hidden")) {
+      rulesModal.classList.add("hidden");
+      rulesModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
   });
 
   document.getElementById("create-lobby-btn").addEventListener("click", async () => {
@@ -259,6 +453,13 @@ function bindEvents() {
     });
   });
 
+  document.getElementById("difficulty-select").addEventListener("change", (event) => {
+    if (!state.isHost) return;
+    state.settings.difficulty = event.target.value;
+    saveSettings();
+    syncToSupabase();
+  });
+
 }
 
 function initializeTheme() {
@@ -292,17 +493,61 @@ async function loadWords() {
   try {
     const response = await fetch("./data/words.json");
     if (!response.ok) throw new Error("JSON konnte nicht geladen werden.");
-    state.wordDeck = await response.json();
+    const rawWords = await response.json();
+    state.wordDeckByDifficulty = normalizeWordDeck(rawWords);
+    state.wordDeck = Object.values(state.wordDeckByDifficulty).flat();
   } catch (error) {
     console.error("Word deck load failed:", error);
-    state.wordDeck = [
-      { word: "Baum", clues: ["Wald", "Blätter", "Stamm", "Natur", "Holz"] },
-      { word: "Haus", clues: ["Dach", "Zimmer", "Familie", "Wohnen", "Fenster"] },
-      { word: "Auto", clues: ["Motor", "Räder", "Fahren", "Straße", "Benzin"] },
-      { word: "Katze", clues: ["Schnurrbart", "Tatzen", "Meow", "Haustier", "Whisker"] },
-      { word: "Buch", clues: ["Lesen", "Seiten", "Geschichte", "Buchstaben", "Umschlag"] },
-    ];
+    state.wordDeckByDifficulty = {
+      easy: [
+        { word: "Baum", clues: ["Wald", "Blätter", "Stamm", "Natur", "Holz"] },
+        { word: "Haus", clues: ["Dach", "Zimmer", "Familie", "Wohnen", "Fenster"] },
+        { word: "Auto", clues: ["Motor", "Räder", "Fahren", "Straße", "Benzin"] },
+        { word: "Katze", clues: ["Schnurrbart", "Tatzen", "Meow", "Haustier", "Whisker"] },
+        { word: "Buch", clues: ["Lesen", "Seiten", "Geschichte", "Buchstaben", "Umschlag"] },
+      ],
+      medium: [],
+      hard: [],
+      veryHard: [],
+    };
+    state.wordDeck = Object.values(state.wordDeckByDifficulty).flat();
   }
+}
+
+function normalizeWordDeck(rawWords) {
+  const normalized = {
+    easy: [],
+    medium: [],
+    hard: [],
+    veryHard: [],
+  };
+
+  if (!rawWords || typeof rawWords !== "object") return normalized;
+
+  if (Array.isArray(rawWords)) {
+    normalized.easy = rawWords;
+    normalized.medium = rawWords;
+    normalized.hard = rawWords;
+    normalized.veryHard = rawWords;
+    return normalized;
+  }
+
+  Object.entries(normalized).forEach(([difficultyKey, value]) => {
+    const category = rawWords[difficultyKey] || rawWords[difficultyKey.toLowerCase()] || rawWords[difficultyKey.replace(/([A-Z])/g, "-$1").toLowerCase()];
+    if (Array.isArray(category)) {
+      normalized[difficultyKey] = category;
+    }
+  });
+
+  if (!Object.values(normalized).some((list) => list.length)) {
+    const flatWords = Object.values(rawWords).flat().filter(Boolean);
+    normalized.easy = flatWords;
+    normalized.medium = flatWords;
+    normalized.hard = flatWords;
+    normalized.veryHard = flatWords;
+  }
+
+  return normalized;
 }
 
 function hydrateSettings() {
@@ -462,6 +707,7 @@ function renderSettings() {
   document.getElementById("jesterProbability").value = state.settings.jesterProbability;
   document.getElementById("detectiveProbability").value = state.settings.detectiveProbability;
   document.getElementById("doppelgangerProbability").value = state.settings.doppelgangerProbability;
+  document.getElementById("difficulty-select").value = state.settings.difficulty || "random";
 
   document.getElementById("jesterProbabilityValue").textContent = `${state.settings.jesterProbability}%`;
   document.getElementById("detectiveProbabilityValue").textContent = `${state.settings.detectiveProbability}%`;
@@ -472,7 +718,7 @@ function renderSettings() {
   document.getElementById("doppelgangerRandomEnabled").checked = !!state.settings.doppelgangerRandomEnabled;
 
   state.detectiveMessage = state.settings.detectiveMessage || state.detectiveMessage || "";
-  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled").forEach((control) => {
+  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select").forEach((control) => {
     control.disabled = !state.isHost;
   });
 }
@@ -767,11 +1013,16 @@ function calculateRoleCount(baseCount, probability, randomEnabled) {
 }
 
 function selectGameWord() {
-  if (!state.wordDeck.length) {
+  const difficulty = state.settings?.difficulty || "random";
+  const activeDeck = difficulty === "random"
+    ? state.wordDeck
+    : state.wordDeckByDifficulty[difficulty] || state.wordDeck;
+
+  if (!activeDeck || !activeDeck.length) {
     return { word: "Baum", clues: ["Wald", "Blätter", "Stamm", "Natur", "Holz"] };
   }
 
-  return state.wordDeck[Math.floor(Math.random() * state.wordDeck.length)];
+  return activeDeck[Math.floor(Math.random() * activeDeck.length)];
 }
 
 function shuffle(items) {

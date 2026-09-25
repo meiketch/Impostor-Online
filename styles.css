@@ -69,6 +69,17 @@ select {
   margin-bottom: 22px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rules-btn {
+  min-width: 110px;
+  align-self: center;
+}
+
 .theme-picker {
   display: grid;
   gap: 5px;
@@ -88,6 +99,96 @@ select {
   background: rgba(15, 23, 42, 0.82);
   color: var(--text);
   cursor: pointer;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1100px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(17, 24, 39, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+.rules-content {
+  padding: 24px;
+  overflow-y: auto;
+  line-height: 1.7;
+}
+
+.rules-content h1,
+.rules-content h2,
+.rules-content h3,
+.rules-content h4 {
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  color: var(--text);
+}
+
+.rules-content h1:first-child,
+.rules-content h2:first-child,
+.rules-content h3:first-child {
+  margin-top: 0;
+}
+
+.rules-content p,
+.rules-content li {
+  color: var(--text);
+}
+
+.rules-content strong {
+  color: var(--cyan);
+}
+
+.rules-content ul,
+.rules-content ol {
+  padding-left: 1.5rem;
+}
+
+.rules-content blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid rgba(34, 211, 238, 0.5);
+  color: var(--muted);
 }
 
 .netscape-badge {
@@ -390,6 +491,31 @@ textarea {
   min-width: 20px;
   text-align: center;
   font-size: 1.15rem;
+}
+
+.difficulty-box {
+  margin-top: 18px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.difficulty-box label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.difficulty-box select {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
 }
 
 .probability-block {

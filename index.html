@@ -15,16 +15,20 @@
           <p class="eyebrow">Gemeinsam spielen · Jeder auf seinem Gerät</p>
           <h1>Impostor Game</h1>
         </div>
-        <label class="theme-picker" for="theme-select">
-          <span>Design</span>
-          <select id="theme-select" aria-label="Design auswählen">
-            <option value="neon">Neon Night</option>
-            <option value="classic">Classic Space</option>
-            <option value="crt">CRT Terminal</option>
-            <option value="bsod">Windows 95 BSOD</option>
-            <option value="cork">Corkboard Case File</option>
-          </select>
-        </label>
+
+        <div class="topbar-actions">
+          <button id="rules-btn" class="secondary rules-btn" type="button">Regeln</button>
+          <label class="theme-picker" for="theme-select">
+            <span>Design</span>
+            <select id="theme-select" aria-label="Design auswählen">
+              <option value="neon">Neon Night</option>
+              <option value="classic">Classic Space</option>
+              <option value="crt">CRT Terminal</option>
+              <option value="bsod">Windows 95 BSOD</option>
+              <option value="cork">Corkboard Case File</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       <main class="layout three-column">
@@ -111,6 +115,17 @@
             </div>
             </div>
 
+            <div class="difficulty-box">
+              <label for="difficulty-select">Schwierigkeitsgrad</label>
+              <select id="difficulty-select" aria-label="Schwierigkeitsgrad auswählen">
+                <option value="random">Zufällig</option>
+                <option value="easy">Leicht</option>
+                <option value="medium">Mittel</option>
+                <option value="hard">Schwer</option>
+                <option value="veryHard">Sehr Schwer</option>
+              </select>
+            </div>
+
             <div class="probability-block">
             <h3>Zusatzrollen</h3>
 
@@ -163,6 +178,17 @@
     <div class="netscape-badge" aria-hidden="true">
       <span class="netscape-logo">N</span>
       <span>Best Viewed with<br />Netscape Navigator</span>
+    </div>
+
+    <div id="rules-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="rules-modal"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+        <div class="modal-header">
+          <h2 id="rules-title">IMPOSTOR – Regelwerk</h2>
+          <button id="close-rules-btn" class="ghost" type="button">Schließen</button>
+        </div>
+        <div id="rules-content" class="rules-content"></div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
