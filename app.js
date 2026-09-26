@@ -209,9 +209,13 @@ const state = {
   rolePayload: null,
   syncedRoundId: null,
   roundIdFromServer: null,
+  currentScreen: "login",
+  previousScreen: null,
+  screenDirection: "forward",
 };
 
 let supabaseClient = null;
+let subscriptionChannel = null;
 let supabaseReady = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -258,6 +262,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
         await loadLatestDetectiveMessage();
         subscribeToLobby();
+        
+        // Navigate to appropriate screen
+        if (state.roundIdFromServer && state.rolePayload) {
+          state.currentScreen = "game";
+        } else if (state.roundIdFromServer) {
+          state.currentScreen = "role-loading";
+        } else {
+          state.currentScreen = "lobby";
+        }
       }
     } catch (error) {
       showStatus(error.message);
@@ -284,6 +297,97 @@ window.addEventListener("storage", (event) => {
     console.warn("Shared state sync failed:", error);
   }
 });
+
+// ============ SCREEN NAVIGATION ============
+function navigateToScreen(screenName, direction = "forward") {
+  const validScreens = ["login", "lobby", "role-loading", "game"];
+  if (!validScreens.includes(screenName)) return;
+  
+  state.previousScreen = state.currentScreen;
+  state.screenDirection = direction;
+  state.currentScreen = screenName;
+  renderScreens();
+}
+
+// ============ PLAYER AVATAR GENERATOR ============
+function generatePlayerAvatar(playerId) {
+  const colors = ["#8b5cf6", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
+  const colorIndex = playerId.charCodeAt(0) % colors.length;
+  const color = colors[colorIndex];
+  const initiale = playerId[0].toUpperCase();
+  
+  const svg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" fill="${color}" rx="50%"/>
+    <text x="16" y="20" font-size="16" font-weight="bold" fill="white" text-anchor="middle">${initiale}</text>
+  </svg>`;
+  
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+// ============ LEAVE CONFIRMATION MODAL ============
+function showLeaveConfirmation() {
+  const modal = document.createElement("div");
+  modal.className = "confirm-modal";
+  modal.innerHTML = `
+    <div class="confirm-modal-backdrop"></div>
+    <div class="confirm-modal-dialog">
+      <h2>Lobby verlassen</h2>
+      <p>Sicher, dass du die Lobby verlassen möchtest?</p>
+      <div class="confirm-modal-footer">
+        <button class="secondary" data-action="cancel">Abbrechen</button>
+        <button class="primary" data-action="confirm">Ja, verlassen</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  modal.querySelector('[data-action="cancel"]').addEventListener("click", () => {
+    modal.remove();
+  });
+  
+  modal.querySelector('[data-action="confirm"]').addEventListener("click", () => {
+    modal.remove();
+    leaveLobby();
+  });
+  
+  modal.querySelector(".confirm-modal-backdrop").addEventListener("click", () => {
+    modal.remove();
+  });
+}
+
+// ============ LEAVE LOBBY ============
+async function leaveLobby() {
+  try {
+    if (state.lobbyCode && supabaseReady) {
+      await supabaseClient
+        .from("lobby_players")
+        .delete()
+        .eq("lobby_code", state.lobbyCode)
+        .eq("player_id", state.currentPlayerId);
+      
+      if (subscriptionChannel) {
+        subscriptionChannel.unsubscribe();
+      }
+    }
+    
+    state.lobbyCode = null;
+    state.players = [];
+    state.round = null;
+    state.rolePayload = null;
+    state.hostId = null;
+    state.isHost = false;
+    state.roundIdFromServer = null;
+    
+    localStorage.removeItem(STORAGE_KEYS.shared);
+    localStorage.removeItem(STORAGE_KEYS.round);
+    
+    navigateToScreen("login", "backward");
+  } catch (error) {
+    console.error("Error leaving lobby:", error);
+    showStatus("Fehler beim Verlassen der Lobby");
+  }
+}
 
 function bindEvents() {
   const rulesModal = document.getElementById("rules-modal");
@@ -350,6 +454,7 @@ function bindEvents() {
         subscribeToLobby();
       }
       state.statusMessage = "";
+      navigateToScreen("lobby", "forward");
       render();
     } catch (error) {
       console.error("Lobby creation failed:", error);
@@ -376,17 +481,21 @@ function bindEvents() {
       state.settings = { ...defaultSettings, ...lobby.settings };
       state.round = lobby.round || null;
       saveIdentity(player.id);
-      render();
       const joined = await addPlayerToLobby(player);
       if (!joined) return;
       if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
       await loadLatestDetectiveMessage();
       subscribeToLobby();
+      navigateToScreen("lobby", "forward");
       render();
     } catch (error) {
       console.error("Lobby join failed:", error);
       showStatus(error.message);
     }
+  });
+
+  document.getElementById("leave-lobby-btn").addEventListener("click", () => {
+    showLeaveConfirmation();
   });
 
   document.getElementById("start-game-btn").addEventListener("click", async () => {
@@ -404,9 +513,15 @@ function bindEvents() {
 
       state.round = createGameRound(state.players, state.settings, roleCounts);
       saveRound();
-      render();
+      
+      // Navigate to role-loading screen
+      navigateToScreen("role-loading", "forward");
+      
+      // Publish roles to Supabase
+      await publishRolePayloads(state.round);
     } catch (error) {
       showStatus(error.message);
+      navigateToScreen("lobby", "backward");
     }
   });
 
@@ -415,7 +530,9 @@ function bindEvents() {
     state.round = null;
     state.rolePayload = null;
     state.detectiveMessage = "";
+    state.roundIdFromServer = null;
     saveRound();
+    navigateToScreen("lobby", "forward");
     render();
   });
 
@@ -672,11 +789,31 @@ function persistSharedState() {
 }
 
 function render() {
+  renderScreens();
   renderLobbyMeta();
-  renderPlayers();
+  renderLobbyPlayers();
   renderSettings();
   renderPrivateRoleCard();
   renderRoundSummary();
+}
+
+function renderScreens() {
+  document.querySelectorAll(".screen").forEach(screen => {
+    screen.removeAttribute("data-active");
+  });
+  
+  const activeScreen = document.querySelector(`[data-screen="${state.currentScreen}"]`);
+  if (activeScreen) {
+    activeScreen.setAttribute("data-active", "true");
+    activeScreen.setAttribute("data-direction", state.screenDirection);
+  }
+  
+  // Auto-navigate to game when role-loading and rolePayload arrives
+  if (state.currentScreen === "role-loading" && state.rolePayload) {
+    setTimeout(() => {
+      navigateToScreen("game", "forward");
+    }, 300);
+  }
 }
 
 function renderLobbyMeta() {
@@ -695,7 +832,7 @@ function renderLobbyMeta() {
   meta.innerHTML = `<strong>Lobby-Code:</strong> <span class="lobby-code">${escapeHtml(state.lobbyCode)}</span><br><span>Host: ${escapeHtml(host?.name || "wird geladen")}</span>`;
 }
 
-function renderPlayers() {
+function renderLobbyPlayers() {
   const container = document.getElementById("player-list");
   document.getElementById("player-count").textContent = state.players.length;
   if (!state.players.length) {
@@ -706,10 +843,14 @@ function renderPlayers() {
   container.innerHTML = state.players
     .map(
       (player) => `
-        <div class="player-tag ${player.id === state.currentPlayerId ? "is-you" : ""}">
-          <span>${escapeHtml(player.name)}</span>
-          ${player.id === state.hostId ? '<span class="host-mini">HOST</span>' : ""}
-          ${state.isHost && player.id !== state.currentPlayerId ? `<button type="button" data-remove-id="${player.id}" aria-label="Spieler entfernen">×</button>` : ""}
+        <div class="player-tag ${player.id === state.hostId ? "is-host" : ""} ${player.id === state.currentPlayerId ? "is-you" : ""}">
+          <img class="player-avatar" 
+               src="${generatePlayerAvatar(player.id)}" 
+               alt="Avatar" 
+               loading="lazy" />
+          <span class="player-name">${escapeHtml(player.name)}</span>
+          ${player.id === state.hostId ? '<span class="host-badge">👑 HOST</span>' : ""}
+          ${state.isHost && player.id !== state.currentPlayerId ? `<button type="button" class="remove-player-btn" data-remove-id="${player.id}" aria-label="Spieler entfernen">×</button>` : ""}
         </div>
       `
     )
@@ -1213,10 +1354,10 @@ async function refreshLobbyPlayers() {
 
 function subscribeToLobby() {
   if (!supabaseReady || !supabaseClient || !state.lobbyCode) return;
-  if (state.lobbySubscription) supabaseClient.removeChannel(state.lobbySubscription);
+  if (subscriptionChannel) supabaseClient.removeChannel(subscriptionChannel);
   if (state.lobbyPollTimer) clearInterval(state.lobbyPollTimer);
 
-  state.lobbySubscription = supabaseClient
+  subscriptionChannel = supabaseClient
     .channel(`lobby-${state.lobbyCode}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "game_state", filter: `id=eq.${state.lobbyCode}` }, (payload) => {
       const row = payload.new;

@@ -34,145 +34,172 @@
         </div>
       </header>
 
-      <main class="layout three-column">
-        <section class="panel">
-          <h2>Spiel beitreten</h2>
+      <main class="screen-container">
+        <!-- Screen 1: Login -->
+        <section class="screen" data-screen="login" data-active="true">
+          <div class="screen-content">
+            <div class="login-panel">
+              <h2>Spiel beitreten</h2>
 
-          <label class="field-label" for="player-name">Dein Name</label>
-          <input id="player-name" type="text" maxlength="40" placeholder="Name eingeben" autocomplete="nickname" />
+              <label class="field-label" for="player-name">Dein Name</label>
+              <input id="player-name" type="text" maxlength="40" placeholder="Name eingeben" autocomplete="nickname" />
 
-          <div class="lobby-actions">
-            <button id="create-lobby-btn" class="primary" type="button">Lobby erstellen</button>
-          </div>
-
-          <div class="join-box">
-            <input id="join-code-input" type="text" maxlength="6" placeholder="Lobby-Code eingeben" aria-label="Lobby-Code" />
-            <button id="join-lobby-btn" class="secondary" type="button">Beitreten</button>
-          </div>
-
-          <div id="lobby-meta" class="lobby-meta empty-state">Trage deinen Namen ein und erstelle eine Lobby oder nutze einen Einladungscode.</div>
-          <div id="connection-status" class="connection-status">Nicht verbunden</div>
-        </section>
-
-        <section class="panel">
-          <h2>Spieler <span id="player-count" class="panel-count">0</span></h2>
-
-          <div id="player-list" class="player-list"></div>
-
-          <div id="round-status" class="round-status">Noch keine Runde gestartet.</div>
-          <div id="round-summary" class="round-summary"></div>
-
-          <div id="host-controls" class="host-controls">
-            <div class="host-heading">
-              <div>
-                <span class="host-badge">HOST</span>
-                <h3>Lobby-Einstellungen</h3>
+              <div class="lobby-actions">
+                <button id="create-lobby-btn" class="primary" type="button">Lobby erstellen</button>
               </div>
-              <span id="settings-permission" class="muted">Nur der Host kann ändern</span>
-            </div>
 
-            <div class="settings-grid">
-            <div class="counter-box">
-              <span>Impostor</span>
-              <div class="counter">
-                <button type="button" data-action="decrease" data-target="impostorCount">−</button>
-                <strong id="impostorCount">1</strong>
-                <button type="button" data-action="increase" data-target="impostorCount">+</button>
+              <div class="join-box">
+                <input id="join-code-input" type="text" maxlength="6" placeholder="Lobby-Code eingeben" aria-label="Lobby-Code" />
+                <button id="join-lobby-btn" class="secondary" type="button">Beitreten</button>
               </div>
-            </div>
 
-            <div class="counter-box">
-              <span>Jester</span>
-              <div class="counter">
-                <button type="button" data-action="decrease" data-target="jesterCount">−</button>
-                <strong id="jesterCount">0</strong>
-                <button type="button" data-action="increase" data-target="jesterCount">+</button>
-              </div>
-            </div>
-
-            <div class="counter-box">
-              <span>Detektiv</span>
-              <div class="counter">
-                <button type="button" data-action="decrease" data-target="detectiveCount">−</button>
-                <strong id="detectiveCount">0</strong>
-                <button type="button" data-action="increase" data-target="detectiveCount">+</button>
-              </div>
-            </div>
-
-            <div class="counter-box">
-              <span>Items / DT</span>
-              <div class="counter">
-                <button type="button" data-action="decrease" data-target="itemsPerDetective">−</button>
-                <strong id="itemsPerDetective">1</strong>
-                <button type="button" data-action="increase" data-target="itemsPerDetective">+</button>
-              </div>
-            </div>
-
-            <div class="counter-box">
-              <span>Doppelgänger</span>
-              <div class="counter">
-                <button type="button" data-action="decrease" data-target="doppelgangerCount">−</button>
-                <strong id="doppelgangerCount">0</strong>
-                <button type="button" data-action="increase" data-target="doppelgangerCount">+</button>
-              </div>
-            </div>
-            </div>
-
-            <div class="difficulty-box">
-              <label for="difficulty-select">Schwierigkeitsgrad</label>
-              <select id="difficulty-select" aria-label="Schwierigkeitsgrad auswählen">
-                <option value="random">Zufällig</option>
-                <option value="easy">Leicht</option>
-                <option value="medium">Mittel</option>
-                <option value="hard">Schwer</option>
-                <option value="veryHard">Sehr Schwer</option>
-              </select>
-            </div>
-
-            <div class="probability-block">
-            <h3>Zusatzrollen</h3>
-
-            <div class="probability-row">
-              <label for="jesterProbability">Jester-Wahrscheinlichkeit</label>
-              <div class="probability-controls">
-                <input id="jesterProbability" type="range" min="0" max="100" value="25" />
-                <span id="jesterProbabilityValue">25%</span>
-              </div>
-              <label class="checkbox-line"><input id="jesterRandomEnabled" type="checkbox" /> Zufällig</label>
-            </div>
-
-            <div class="probability-row">
-              <label for="detectiveProbability">Detektiv-Wahrscheinlichkeit</label>
-              <div class="probability-controls">
-                <input id="detectiveProbability" type="range" min="0" max="100" value="25" />
-                <span id="detectiveProbabilityValue">25%</span>
-              </div>
-              <label class="checkbox-line"><input id="detectiveRandomEnabled" type="checkbox" /> Zufällig</label>
-            </div>
-
-            <div class="probability-row">
-              <label for="doppelgangerProbability">Doppelgänger-Wahrscheinlichkeit</label>
-              <div class="probability-controls">
-                <input id="doppelgangerProbability" type="range" min="0" max="100" value="0" />
-                <span id="doppelgangerProbabilityValue">0%</span>
-              </div>
-              <label class="checkbox-line"><input id="doppelgangerRandomEnabled" type="checkbox" /> Zufällig</label>
-            </div>
-            </div>
-
-            <div id="host-actions" class="button-row host-only">
-              <button id="start-game-btn" class="primary large" type="button">Runde starten</button>
-              <button id="reset-lobby-btn" class="ghost" type="button">Neue Runde</button>
+              <div id="lobby-meta" class="lobby-meta empty-state">Trage deinen Namen ein und erstelle eine Lobby oder nutze einen Einladungscode.</div>
+              <div id="connection-status" class="connection-status">Nicht verbunden</div>
             </div>
           </div>
         </section>
 
-        <section class="panel">
-          <h2>Dein Spielpanel</h2>
+        <!-- Screen 2: Lobby -->
+        <section class="screen" data-screen="lobby">
+          <div class="screen-content">
+            <div class="lobby-players-section">
+              <h2>Spieler <span id="player-count" class="panel-count">0</span></h2>
+              <div id="player-list" class="player-list"></div>
+            </div>
+            
+            <div class="lobby-settings-section">
+              <div id="host-controls" class="host-controls">
+                <div class="host-heading">
+                  <div>
+                    <span class="host-badge">HOST</span>
+                    <h3>Lobby-Einstellungen</h3>
+                  </div>
+                  <span id="settings-permission" class="muted">Nur der Host kann ändern</span>
+                </div>
 
-          <div id="current-player-label" class="current-player-label">Noch keinem Spieler beigetreten</div>
-          <div id="private-role-card" class="private-role-card empty-state">
-            Nach dem Spielstart erscheint hier nur deine eigene Rolle.
+                <div class="settings-grid">
+                  <div class="counter-box">
+                    <span>Impostor</span>
+                    <div class="counter">
+                      <button type="button" data-action="decrease" data-target="impostorCount">−</button>
+                      <strong id="impostorCount">1</strong>
+                      <button type="button" data-action="increase" data-target="impostorCount">+</button>
+                    </div>
+                  </div>
+
+                  <div class="counter-box">
+                    <span>Jester</span>
+                    <div class="counter">
+                      <button type="button" data-action="decrease" data-target="jesterCount">−</button>
+                      <strong id="jesterCount">0</strong>
+                      <button type="button" data-action="increase" data-target="jesterCount">+</button>
+                    </div>
+                  </div>
+
+                  <div class="counter-box">
+                    <span>Detektiv</span>
+                    <div class="counter">
+                      <button type="button" data-action="decrease" data-target="detectiveCount">−</button>
+                      <strong id="detectiveCount">0</strong>
+                      <button type="button" data-action="increase" data-target="detectiveCount">+</button>
+                    </div>
+                  </div>
+
+                  <div class="counter-box">
+                    <span>Items / DT</span>
+                    <div class="counter">
+                      <button type="button" data-action="decrease" data-target="itemsPerDetective">−</button>
+                      <strong id="itemsPerDetective">1</strong>
+                      <button type="button" data-action="increase" data-target="itemsPerDetective">+</button>
+                    </div>
+                  </div>
+
+                  <div class="counter-box">
+                    <span>Doppelgänger</span>
+                    <div class="counter">
+                      <button type="button" data-action="decrease" data-target="doppelgangerCount">−</button>
+                      <strong id="doppelgangerCount">0</strong>
+                      <button type="button" data-action="increase" data-target="doppelgangerCount">+</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="difficulty-box">
+                  <label for="difficulty-select">Schwierigkeitsgrad</label>
+                  <select id="difficulty-select" aria-label="Schwierigkeitsgrad auswählen">
+                    <option value="random">Zufällig</option>
+                    <option value="easy">Leicht</option>
+                    <option value="medium">Mittel</option>
+                    <option value="hard">Schwer</option>
+                    <option value="veryHard">Sehr Schwer</option>
+                  </select>
+                </div>
+
+                <div class="probability-block">
+                  <h3>Zusatzrollen</h3>
+
+                  <div class="probability-row">
+                    <label for="jesterProbability">Jester-Wahrscheinlichkeit</label>
+                    <div class="probability-controls">
+                      <input id="jesterProbability" type="range" min="0" max="100" value="25" />
+                      <span id="jesterProbabilityValue">25%</span>
+                    </div>
+                    <label class="checkbox-line"><input id="jesterRandomEnabled" type="checkbox" /> Zufällig</label>
+                  </div>
+
+                  <div class="probability-row">
+                    <label for="detectiveProbability">Detektiv-Wahrscheinlichkeit</label>
+                    <div class="probability-controls">
+                      <input id="detectiveProbability" type="range" min="0" max="100" value="25" />
+                      <span id="detectiveProbabilityValue">25%</span>
+                    </div>
+                    <label class="checkbox-line"><input id="detectiveRandomEnabled" type="checkbox" /> Zufällig</label>
+                  </div>
+
+                  <div class="probability-row">
+                    <label for="doppelgangerProbability">Doppelgänger-Wahrscheinlichkeit</label>
+                    <div class="probability-controls">
+                      <input id="doppelgangerProbability" type="range" min="0" max="100" value="0" />
+                      <span id="doppelgangerProbabilityValue">0%</span>
+                    </div>
+                    <label class="checkbox-line"><input id="doppelgangerRandomEnabled" type="checkbox" /> Zufällig</label>
+                  </div>
+                </div>
+
+                <div id="host-actions" class="button-row host-only">
+                  <button id="start-game-btn" class="primary large" type="button">Runde starten</button>
+                  <button id="reset-lobby-btn" class="ghost" type="button">Neue Runde</button>
+                </div>
+
+                <div class="button-row">
+                  <button id="leave-lobby-btn" class="secondary" type="button">Lobby verlassen</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Screen 3: Role Loading -->
+        <section class="screen" data-screen="role-loading">
+          <div class="screen-content">
+            <div class="role-loading-content">
+              <div class="loading-spinner"></div>
+              <h2>🎲 Rollen werden verteilt…</h2>
+            </div>
+          </div>
+        </section>
+
+        <!-- Screen 4: Game -->
+        <section class="screen" data-screen="game">
+          <div class="screen-content">
+            <div class="game-panel">
+              <h2>Dein Spielpanel</h2>
+
+              <div id="current-player-label" class="current-player-label">Noch keinem Spieler beigetreten</div>
+              <div id="private-role-card" class="private-role-card empty-state">
+                Nach dem Spielstart erscheint hier nur deine eigene Rolle.
+              </div>
+            </div>
           </div>
         </section>
       </main>
