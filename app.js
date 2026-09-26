@@ -904,24 +904,51 @@ function renderScreens() {
 }
 
 function renderLobbyMeta() {
-  const meta = document.getElementById("lobby-meta");
+  // Only show connection status on login screen
   const connection = document.getElementById("connection-status");
-  connection.textContent = supabaseReady ? "● Multiplayer verbunden" : "○ Multiplayer nicht verbunden";
-  connection.style.color = supabaseReady ? "var(--green)" : "var(--gold)";
+  if (connection) {
+    connection.textContent = supabaseReady ? "● Multiplayer verbunden" : "○ Multiplayer nicht verbunden";
+    connection.style.color = supabaseReady ? "var(--green)" : "var(--gold)";
+  }
+  
+  // Only show lobby meta on login screen
+  const meta = document.getElementById("lobby-meta");
+  if (!meta) return; // Element doesn't exist on this screen
+  
   if (!state.lobbyCode) {
-    meta.textContent = "Noch keine Lobby aktiv.";
+    meta.textContent = "Trage deinen Namen ein und erstelle eine Lobby oder nutze einen Einladungscode.";
     meta.classList.add("empty-state");
     return;
   }
-
-  meta.classList.remove("empty-state");
-  const host = state.players.find((player) => player.id === state.hostId) || state.players[0];
-  meta.innerHTML = `<strong>Lobby-Code:</strong> <span class="lobby-code">${escapeHtml(state.lobbyCode)}</span><br><span>Host: ${escapeHtml(host?.name || "wird geladen")}</span>`;
+  
+  // Hide lobby info from login screen
+  meta.textContent = "Lobby-Code und Host sichtbar nach Beitritt.";
+  meta.classList.add("empty-state");
 }
 
 function renderLobbyPlayers() {
   const container = document.getElementById("player-list");
-  document.getElementById("player-count").textContent = state.players.length;
+  if (!container) return; // Player list doesn't exist on this screen
+  
+  const playerCountEl = document.getElementById("player-count");
+  if (playerCountEl) playerCountEl.textContent = state.players.length;
+  
+  // Show lobby info (code and host) on lobby screen
+  const lobbyInfoEl = document.getElementById("lobby-info");
+  if (lobbyInfoEl && state.lobbyCode) {
+    const host = state.players.find((player) => player.id === state.hostId) || state.players[0];
+    lobbyInfoEl.innerHTML = `
+      <div class="lobby-code-display">
+        <strong>Lobby-Code:</strong> <span class="lobby-code-value">${escapeHtml(state.lobbyCode)}</span>
+      </div>
+      <div class="lobby-host-display">
+        <strong>Host:</strong> <span>${escapeHtml(host?.name || "wird geladen")}</span>
+      </div>
+    `;
+  } else if (lobbyInfoEl) {
+    lobbyInfoEl.innerHTML = "";
+  }
+  
   if (!state.players.length) {
     container.innerHTML = '<div class="empty-state">Noch keine Spieler hinzugefügt.</div>';
     return;
@@ -945,29 +972,56 @@ function renderLobbyPlayers() {
 }
 
 function renderSettings() {
-  document.getElementById("host-controls").classList.remove("hidden");
-  document.getElementById("host-actions").classList.toggle("hidden", !state.isHost);
-  document.getElementById("settings-permission").textContent = state.isHost ? "Du bist der Host" : "Nur der Host kann ändern";
-  document.getElementById("current-player-label").textContent = state.currentPlayerId
-    ? `Verbunden als ${state.players.find((player) => player.id === state.currentPlayerId)?.name || "Spieler"}`
-    : "Noch keinem Spieler beigetreten";
+  const hostControlsEl = document.getElementById("host-controls");
+  if (hostControlsEl) hostControlsEl.classList.remove("hidden");
+  
+  const hostActionsEl = document.getElementById("host-actions");
+  if (hostActionsEl) hostActionsEl.classList.toggle("hidden", !state.isHost);
+  
+  const settingsPermEl = document.getElementById("settings-permission");
+  if (settingsPermEl) settingsPermEl.textContent = state.isHost ? "Du bist der Host" : "Nur der Host kann ändern";
+  
+  const currentPlayerLabelEl = document.getElementById("current-player-label");
+  if (currentPlayerLabelEl) {
+    currentPlayerLabelEl.textContent = state.currentPlayerId
+      ? `Verbunden als ${state.players.find((player) => player.id === state.currentPlayerId)?.name || "Spieler"}`
+      : "Noch keinem Spieler beigetreten";
+  }
+  
   Object.entries(state.settings).forEach(([key, value]) => {
     const node = document.getElementById(key);
     if (node) node.textContent = String(value);
   });
 
-  document.getElementById("jesterProbability").value = state.settings.jesterProbability;
-  document.getElementById("detectiveProbability").value = state.settings.detectiveProbability;
-  document.getElementById("doppelgangerProbability").value = state.settings.doppelgangerProbability;
-  document.getElementById("difficulty-select").value = state.settings.difficulty || "random";
+  const jesterProbEl = document.getElementById("jesterProbability");
+  if (jesterProbEl) jesterProbEl.value = state.settings.jesterProbability;
+  
+  const detectiveProbEl = document.getElementById("detectiveProbability");
+  if (detectiveProbEl) detectiveProbEl.value = state.settings.detectiveProbability;
+  
+  const doppelgangerProbEl = document.getElementById("doppelgangerProbability");
+  if (doppelgangerProbEl) doppelgangerProbEl.value = state.settings.doppelgangerProbability;
+  
+  const difficultySelectEl = document.getElementById("difficulty-select");
+  if (difficultySelectEl) difficultySelectEl.value = state.settings.difficulty || "random";
 
-  document.getElementById("jesterProbabilityValue").textContent = `${state.settings.jesterProbability}%`;
-  document.getElementById("detectiveProbabilityValue").textContent = `${state.settings.detectiveProbability}%`;
-  document.getElementById("doppelgangerProbabilityValue").textContent = `${state.settings.doppelgangerProbability}%`;
+  const jesterProbValueEl = document.getElementById("jesterProbabilityValue");
+  if (jesterProbValueEl) jesterProbValueEl.textContent = `${state.settings.jesterProbability}%`;
+  
+  const detectiveProbValueEl = document.getElementById("detectiveProbabilityValue");
+  if (detectiveProbValueEl) detectiveProbValueEl.textContent = `${state.settings.detectiveProbability}%`;
+  
+  const doppelgangerProbValueEl = document.getElementById("doppelgangerProbabilityValue");
+  if (doppelgangerProbValueEl) doppelgangerProbValueEl.textContent = `${state.settings.doppelgangerProbability}%`;
 
-  document.getElementById("jesterRandomEnabled").checked = !!state.settings.jesterRandomEnabled;
-  document.getElementById("detectiveRandomEnabled").checked = !!state.settings.detectiveRandomEnabled;
-  document.getElementById("doppelgangerRandomEnabled").checked = !!state.settings.doppelgangerRandomEnabled;
+  const jesterRandomEl = document.getElementById("jesterRandomEnabled");
+  if (jesterRandomEl) jesterRandomEl.checked = !!state.settings.jesterRandomEnabled;
+  
+  const detectiveRandomEl = document.getElementById("detectiveRandomEnabled");
+  if (detectiveRandomEl) detectiveRandomEl.checked = !!state.settings.detectiveRandomEnabled;
+  
+  const doppelgangerRandomEl = document.getElementById("doppelgangerRandomEnabled");
+  if (doppelgangerRandomEl) doppelgangerRandomEl.checked = !!state.settings.doppelgangerRandomEnabled;
 
   state.detectiveMessage = state.settings.detectiveMessage || state.detectiveMessage || "";
   document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select").forEach((control) => {
@@ -977,6 +1031,8 @@ function renderSettings() {
 
 function renderPrivateRoleCard() {
   const card = document.getElementById("private-role-card");
+  if (!card) return; // Card doesn't exist on this screen
+  
   const existingInput = document.getElementById("detective-message-input");
   const draftMessage = existingInput ? existingInput.value : null;
   if (!state.currentPlayerId) {
@@ -1089,6 +1145,8 @@ async function removePlayerFromLobby(playerId) {
 function renderRoundSummary() {
   const status = document.getElementById("round-status");
   const summary = document.getElementById("round-summary");
+  
+  if (!status || !summary) return; // Elements don't exist on this screen
 
   if (state.statusMessage) {
     status.textContent = state.statusMessage;
