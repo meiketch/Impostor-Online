@@ -2028,7 +2028,7 @@ async function publishRolePayloads(round) {
   // This avoids race conditions and duplicate key errors
   const { error } = await supabaseClient
     .from("player_rounds")
-    .upsert(rows, { onConflict: "lobby_code,player_id" });
+    .upsert(rows, { onConflict: "lobby_code,player_id,round_id" });
 
   if (error) {
     // Debug: Prüfe, ob game_state Zeile mit der game_state mit korrektem host_id existiert
@@ -2053,7 +2053,7 @@ async function publishRolePayloads(round) {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=14").catch((error) => {
+    navigator.serviceWorker.register("./sw.js?v=15").catch((error) => {
       console.warn("Service worker registration failed:", error);
     });
   });

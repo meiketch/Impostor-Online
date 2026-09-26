@@ -1470,6 +1470,28 @@ body[data-theme="crt"] .panel {
   box-shadow: 0 0 12px rgba(50, 255, 83, 0.16), inset 0 0 18px rgba(50, 255, 83, 0.06);
 }
 
+body[data-theme="crt"] .login-panel,
+body[data-theme="crt"] .lobby-players-section,
+body[data-theme="crt"] .lobby-settings-section,
+body[data-theme="crt"] .game-panel {
+  border: 1px solid rgba(108, 255, 127, 0.82);
+  border-radius: 0;
+  background: rgba(1, 18, 7, 0.88);
+  box-shadow: 0 0 12px rgba(50, 255, 83, 0.16), inset 0 0 18px rgba(50, 255, 83, 0.06);
+  color: #9cffad;
+}
+
+body[data-theme="crt"] .lobby-info,
+body[data-theme="crt"] .round-status,
+body[data-theme="crt"] .round-summary,
+body[data-theme="crt"] .difficulty-box,
+body[data-theme="crt"] .probability-block,
+body[data-theme="crt"] .host-controls {
+  border-color: rgba(108, 255, 127, 0.72);
+  background: rgba(0, 19, 7, 0.82);
+  color: #9cffad;
+}
+
 body[data-theme="crt"] .counter-box,
 body[data-theme="crt"] .private-role-card {
   border-radius: 0;
@@ -1510,6 +1532,51 @@ body[data-theme="crt"] .role-player {
   border-color: currentColor;
   background: transparent;
   color: #a5ffb0;
+}
+
+body[data-theme="crt"] .modal-backdrop,
+body[data-theme="crt"] .confirm-modal-backdrop {
+  background: rgba(0, 10, 4, 0.82);
+  backdrop-filter: none;
+}
+
+body[data-theme="crt"] .modal-dialog,
+body[data-theme="crt"] .confirm-modal-dialog {
+  background: #031507;
+  border: 1px solid #6cff7f;
+  border-radius: 0;
+  box-shadow: 0 0 16px rgba(57, 255, 93, 0.2), inset 0 0 18px rgba(50, 255, 83, 0.06);
+  color: #9cffad;
+}
+
+body[data-theme="crt"] .modal-header {
+  border-bottom: 1px solid #6cff7f;
+}
+
+body[data-theme="crt"] .modal-header h2,
+body[data-theme="crt"] .confirm-modal-dialog h2,
+body[data-theme="crt"] .rules-content h1,
+body[data-theme="crt"] .rules-content h2,
+body[data-theme="crt"] .rules-content h3,
+body[data-theme="crt"] .rules-content h4,
+body[data-theme="crt"] .rules-content p,
+body[data-theme="crt"] .rules-content li,
+body[data-theme="crt"] .confirm-modal-dialog p {
+  color: #9cffad;
+  text-shadow: 0 0 6px rgba(99, 255, 121, 0.45);
+}
+
+body[data-theme="crt"] .rules-content strong {
+  color: #d6ff8a;
+}
+
+body[data-theme="crt"] .modal-header button,
+body[data-theme="crt"] .confirm-modal-footer button {
+  border: 1px solid #8dff9d;
+  border-radius: 0;
+  background: #062b10;
+  color: #9cffad;
+  box-shadow: 0 0 8px rgba(75, 255, 102, 0.22);
 }
 
 @keyframes crt-flicker {
@@ -1625,6 +1692,100 @@ body[data-theme="bsod"] .panel {
   box-shadow: none;
 }
 
+body[data-theme="bsod"] .login-panel,
+body[data-theme="bsod"] .lobby-players-section,
+body[data-theme="bsod"] .lobby-settings-section,
+body[data-theme="bsod"] .game-panel {
+  position: relative;
+  overflow: hidden;
+  border: 2px outset #dfdfdf;
+  border-radius: 0;
+  background: #c0c0c0;
+  box-shadow: 1px 1px 0 0 #dfdfdf, 2px 2px 0 0 #808080, inset 1px 1px 0 #ffffff;
+  color: #000000;
+  padding-top: 52px;
+}
+
+body[data-theme="bsod"] .login-panel::before,
+body[data-theme="bsod"] .lobby-players-section::before,
+body[data-theme="bsod"] .lobby-settings-section::before,
+body[data-theme="bsod"] .game-panel::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 31px;
+  border-bottom: 2px solid #808080;
+  background: linear-gradient(90deg, #000080, #1084d7);
+  content: "";
+  color: #ffffff;
+  font-family: "MS Sans Serif", Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 31px;
+  padding-left: 10px;
+}
+
+body[data-theme="bsod"] .login-panel::before {
+  content: "IMPOSTOR - Lobby beitreten";
+}
+
+body[data-theme="bsod"] .lobby-players-section::before {
+  content: "SPIELER";
+}
+
+body[data-theme="bsod"] .lobby-settings-section::before {
+  content: "LOBBY-EINSTELLUNGEN";
+}
+
+body[data-theme="bsod"] .game-panel::before {
+  content: "GAME STATE";
+}
+
+body[data-theme="bsod"] .lobby-info,
+body[data-theme="bsod"] .round-status,
+body[data-theme="bsod"] .round-summary,
+body[data-theme="bsod"] .difficulty-box,
+body[data-theme="bsod"] .probability-block,
+body[data-theme="bsod"] .host-controls {
+  border-color: #808080;
+  border-radius: 0;
+  background: #c0c0c0;
+  color: #000000;
+}
+
+body[data-theme="bsod"] .login-panel h2,
+body[data-theme="bsod"] .lobby-players-section h2,
+body[data-theme="bsod"] .lobby-settings-section h3,
+body[data-theme="bsod"] .game-panel h2,
+body[data-theme="bsod"] .difficulty-box label,
+body[data-theme="bsod"] .probability-block h3,
+body[data-theme="bsod"] .lobby-info,
+body[data-theme="bsod"] .round-status,
+body[data-theme="bsod"] .round-summary,
+body[data-theme="bsod"] .muted,
+body[data-theme="bsod"] .empty-state,
+body[data-theme="bsod"] .field-label,
+body[data-theme="bsod"] .connection-status,
+body[data-theme="bsod"] .status-message,
+body[data-theme="bsod"] .lobby-meta,
+body[data-theme="bsod"] .settings-permission,
+body[data-theme="bsod"] .probability-row label,
+body[data-theme="bsod"] .checkbox-line {
+  color: #000000;
+  text-shadow: none;
+}
+
+body[data-theme="bsod"] .counter-box,
+body[data-theme="bsod"] .private-role-card,
+body[data-theme="bsod"] .player-tag {
+  border: 1px solid #808080;
+  border-radius: 0;
+  background: #c0c0c0;
+  color: #000000;
+  box-shadow: inset 1px 1px 0 #ffffff, 1px 1px 0 #808080;
+}
+
 body[data-theme="bsod"] .host-controls,
 body[data-theme="bsod"] .probability-block {
   border-color: #ffffff;
@@ -1734,6 +1895,36 @@ body[data-theme="bsod"] .modal-header h2 {
   font-family: "MS Sans Serif", Arial, sans-serif;
   font-size: 0.9rem;
   font-weight: bold;
+}
+
+body[data-theme="bsod"] .confirm-modal-backdrop {
+  background: rgba(0, 0, 128, 0.72);
+  backdrop-filter: none;
+}
+
+body[data-theme="bsod"] .confirm-modal-dialog {
+  background: #c0c0c0;
+  border: 2px outset #dfdfdf;
+  border-radius: 0;
+  box-shadow: 1px 1px 0 0 #dfdfdf, 2px 2px 0 0 #808080, inset 1px 1px 0 #ffffff;
+  color: #000000;
+}
+
+body[data-theme="bsod"] .confirm-modal-dialog h2,
+body[data-theme="bsod"] .confirm-modal-dialog p {
+  color: #000000;
+  font-family: "MS Sans Serif", Arial, sans-serif;
+  text-shadow: none;
+}
+
+body[data-theme="bsod"] .confirm-modal-footer button,
+body[data-theme="bsod"] .modal-header button {
+  border: 2px outset #dfdfdf;
+  border-radius: 0;
+  background: #c0c0c0;
+  color: #000000;
+  box-shadow: 1px 1px 0 0 #ffffff inset, -1px -1px 0 0 #808080 inset;
+  font-family: "MS Sans Serif", Arial, sans-serif;
 }
 
 body[data-theme="bsod"] .close-rules-btn {
@@ -1853,6 +2044,38 @@ body[data-theme="cork"] .panel {
   color: #28251f;
 }
 
+body[data-theme="cork"] .login-panel,
+body[data-theme="cork"] .lobby-players-section,
+body[data-theme="cork"] .lobby-settings-section,
+body[data-theme="cork"] .game-panel {
+  border: 1px solid #c7b792;
+  border-radius: 2px;
+  background: #f3ead5;
+  box-shadow: var(--shadow);
+  color: #28251f;
+}
+
+body[data-theme="cork"] .lobby-info,
+body[data-theme="cork"] .round-status,
+body[data-theme="cork"] .round-summary,
+body[data-theme="cork"] .difficulty-box,
+body[data-theme="cork"] .probability-block,
+body[data-theme="cork"] .host-controls {
+  border-color: #c7b792;
+  background: rgba(255, 253, 242, 0.72);
+  color: #28251f;
+}
+
+body[data-theme="cork"] .login-panel h2,
+body[data-theme="cork"] .lobby-players-section h2,
+body[data-theme="cork"] .lobby-settings-section h3,
+body[data-theme="cork"] .game-panel h2,
+body[data-theme="cork"] .difficulty-box label,
+body[data-theme="cork"] .probability-block h3 {
+  color: #29251f;
+  text-shadow: none;
+}
+
 body[data-theme="cork"] .panel::before {
   position: absolute;
   top: -9px;
@@ -1951,6 +2174,52 @@ body[data-theme="cork"] .player-tag.is-you {
   border-radius: 1px;
   background: #fffdf2;
   color: #28251f;
+}
+
+body[data-theme="cork"] .modal-backdrop,
+body[data-theme="cork"] .confirm-modal-backdrop {
+  background: rgba(52, 30, 16, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+body[data-theme="cork"] .modal-dialog,
+body[data-theme="cork"] .confirm-modal-dialog {
+  background: #f3ead5;
+  border: 1px solid #b49b70;
+  border-radius: 2px;
+  box-shadow: 5px 7px 0 rgba(71, 42, 22, 0.3);
+  color: #28251f;
+}
+
+body[data-theme="cork"] .modal-header {
+  border-bottom: 1px solid #c7b792;
+}
+
+body[data-theme="cork"] .modal-header h2,
+body[data-theme="cork"] .confirm-modal-dialog h2,
+body[data-theme="cork"] .rules-content h1,
+body[data-theme="cork"] .rules-content h2,
+body[data-theme="cork"] .rules-content h3,
+body[data-theme="cork"] .rules-content h4,
+body[data-theme="cork"] .rules-content p,
+body[data-theme="cork"] .rules-content li,
+body[data-theme="cork"] .confirm-modal-dialog p {
+  color: #28251f;
+  text-shadow: none;
+}
+
+body[data-theme="cork"] .rules-content strong {
+  color: #2f6b58;
+}
+
+body[data-theme="cork"] .modal-header button,
+body[data-theme="cork"] .confirm-modal-footer button {
+  border: 1px solid #aa8b43;
+  border-radius: 2px;
+  background: #e5dfcb;
+  color: #342b1d;
+  box-shadow: 2px 3px 0 rgba(72, 47, 25, 0.18);
+  font-family: Georgia, "Times New Roman", serif;
 }
 
 body[data-theme="cork"] .netscape-badge {
