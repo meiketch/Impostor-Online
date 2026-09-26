@@ -249,6 +249,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.round = null;
     localStorage.removeItem(STORAGE_KEYS.round);
   }
+  
+  // On page reload: remove player from old lobby and clear lobby state
+  if (supabaseReady && state.lobbyCode) {
+    try {
+      await supabaseClient
+        .from("lobby_players")
+        .delete()
+        .eq("lobby_code", state.lobbyCode)
+        .eq("player_id", state.currentPlayerId);
+    } catch (error) {
+      console.warn("Could not remove player from lobby on reload:", error);
+    }
+    state.lobbyCode = null;
+    state.players = [];
+    state.hostId = null;
+    state.isHost = false;
+    state.roundIdFromServer = null;
+    state.rolePayload = null;
+    localStorage.removeItem(STORAGE_KEYS.shared);
+  }
+  
   if (supabaseReady && state.lobbyCode) {
     try {
       const lobby = await loadLobby(state.lobbyCode);
@@ -342,17 +363,28 @@ function showLeaveConfirmation() {
   
   document.body.appendChild(modal);
   
-  modal.querySelector('[data-action="cancel"]').addEventListener("click", () => {
-    modal.remove();
-  });
+  const cancelBtn = modal.querySelector('[data-action="cancel"]');
+  const confirmBtn = modal.querySelector('[data-action="confirm"]');
+  const backdrop = modal.querySelector(".confirm-modal-backdrop");
   
-  modal.querySelector('[data-action="confirm"]').addEventListener("click", () => {
-    modal.remove();
+  const closeModal = () => {
+    if (modal.parentElement) modal.remove();
+  };
+  
+  cancelBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeModal();
+  }, { once: true });
+  
+  confirmBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeModal();
     leaveLobby();
-  });
+  }, { once: true });
   
-  modal.querySelector(".confirm-modal-backdrop").addEventListener("click", () => {
-    modal.remove();
+  backdrop.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeModal();
   });
 }
 
