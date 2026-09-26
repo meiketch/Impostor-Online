@@ -263,10 +263,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadLatestDetectiveMessage();
         subscribeToLobby();
         
-        // Navigate to appropriate screen
-        if (state.roundIdFromServer && state.rolePayload) {
+        // Navigate to appropriate screen - only if round is still active
+        if (state.round && state.roundIdFromServer && state.rolePayload) {
           state.currentScreen = "game";
-        } else if (state.roundIdFromServer) {
+        } else if (state.round && state.roundIdFromServer) {
           state.currentScreen = "role-loading";
         } else {
           state.currentScreen = "lobby";
@@ -1441,6 +1441,10 @@ async function loadOwnRolePayload(roundId) {
     state.rolePayload = data.payload;
     state.syncedRoundId = roundId;
     render();
+  } else {
+    // If role not found but roundId exists, clear roundId (game likely ended)
+    state.roundIdFromServer = null;
+    state.rolePayload = null;
   }
 }
 
