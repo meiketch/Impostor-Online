@@ -576,6 +576,7 @@ function bindEvents() {
     if (startGameBtn) {
       event.preventDefault();
       event.stopPropagation();
+      console.log("Start game button clicked");
       handleStartGame();
       return;
     }
@@ -625,38 +626,47 @@ function bindEvents() {
 
 async function handleStartGame() {
   try {
+    console.log("handleStartGame() called, isHost:", state.isHost);
     if (!state.isHost) throw new Error("Nur der Host kann das Spiel starten.");
     if (!state.lobbyCode) {
       throw new Error("Erstelle zuerst eine Lobby.");
     }
 
+    console.log("Computing role counts...");
     const roleCounts = computeRoleCounts(state.settings);
+    console.log("Role counts:", roleCounts);
 
     if (state.players.length < roleCounts.total + 1) {
-      throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
+      throw new Error(`Nicht genügend Spieler (${state.players.length}) für die Rollenverteilung (${roleCounts.total + 1}).`);
     }
 
+    console.log("Creating game round...");
     state.round = createGameRound(state.players, state.settings, roleCounts);
+    console.log("Round created:", state.round?.id);
     saveRound();
     
+    console.log("Syncing to Supabase...");
     // Sync to Supabase to notify other players
     const synced = await syncToSupabase();
+    console.log("Sync result:", synced);
     if (!synced) {
       showStatus("Fehler beim Speichern des Spielstarts.");
       state.round = null;
       return;
     }
     
+    console.log("Navigating to role-loading screen...");
     // Navigate to role-loading screen
     navigateToScreen("role-loading", "forward");
     render();
     
+    console.log("Publishing role payloads...");
     // Publish roles to Supabase
     await publishRolePayloads(state.round);
+    console.log("Game started successfully!");
   } catch (error) {
+    console.error("handleStartGame() error:", error);
     showStatus(error.message);
-    navigateToScreen("lobby", "backward");
-    render();
   }
 }
 
