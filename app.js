@@ -1371,14 +1371,34 @@ async function publishRolePayloads(round) {
   }));
 
   // Alte Runden-Zeilen der Lobby zuerst entfernen, damit nichts Altlastiges übrig bleibt.
-  await supabaseClient.from("player_rounds").delete().eq("lobby_code", state.lobbyCode);
+  const { error: deleteError } = await supabaseClient
+    .from("player_rounds")
+    .delete()
+    .eq("lobby_code", state.lobbyCode);
+  
+  if (deleteError) {
+    console.warn("Fehler beim Löschen alter Rollen-Zeilen:", deleteError);
+  }
 
   const { error } = await supabaseClient
     .from("player_rounds")
     .upsert(rows, { onConflict: "lobby_code,player_id,round_id" });
 
   if (error) {
-    throw new Error(`Rollen konnten nicht verteilt werden (${error.code || "Supabase"}): ${error.message}`);
+    // Debug: Prüfe, ob game_state Zeile mit der game_state mit korrektem host_id existiert
+    const { data: gameState, error: checkError } = await supabaseClient
+      .from("game_state")
+      .select("id, host_id")
+      .eq("id", state.lobbyCode)
+      .maybeSingle();
+    
+    const debugInfo = gameState
+      ? `game_state existiert (host_id="${gameState.host_id}", dein currentPlayerId="${state.currentPlayerId}", state.hostId="${state.hostId}")`
+      : `game_state existiert NICHT für lobby_code="${state.lobbyCode}"`;
+    
+    const fullError = `Rollen konnten nicht verteilt werden (${error.code || "Supabase"}): ${error.message}. [Debug: ${debugInfo}]`;
+    console.error(fullError);
+    throw new Error(fullError);
   }
 
   state.rolePayload = rolePayloads[state.currentPlayerId] || null;
