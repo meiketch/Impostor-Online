@@ -464,173 +464,173 @@ function bindEvents() {
     }
   });
 
-  document.getElementById("create-lobby-btn").addEventListener("click", async () => {
-    const name = getPlayerName();
-    if (!name) return showStatus("Gib zuerst deinen Namen ein.");
-    const code = generateLobbyCode();
-    const player = { id: supabaseReady ? state.supabaseUserId : createPlayerId(), name };
-    if (!player.id) return showStatus("Multiplayer-Identität nicht verfügbar.");
-    state.currentPlayerId = player.id;
-    state.lobbyCode = code;
-    state.hostId = player.id;
-    state.isHost = true;
-    state.players = [player];
-    state.round = null;
-    saveIdentity(player.id);
-    try {
-      if (supabaseReady) {
-        const synced = await syncToSupabase();
-        if (!synced) return;
-        const joined = await addPlayerToLobby(player);
-        if (!joined) return;
-        subscribeToLobby();
+  // Use event delegation for dynamic button handling
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("#create-lobby-btn");
+    if (btn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const name = getPlayerName();
+      if (!name) {
+        showStatus("Gib zuerst deinen Namen ein.");
+        return;
       }
-      state.statusMessage = "";
-      navigateToScreen("lobby", "forward");
-      render();
-    } catch (error) {
-      console.error("Lobby creation failed:", error);
-      showStatus(error.message || "Lobby konnte nicht erstellt werden.");
-    }
-  });
-
-  document.getElementById("join-lobby-btn").addEventListener("click", async () => {
-    const name = getPlayerName();
-    const code = document.getElementById("join-code-input").value.trim().toUpperCase();
-    if (!name || !code) return showStatus("Gib deinen Namen und einen Lobby-Code ein.");
-    if (!supabaseReady) return showStatus("Multiplayer ist nicht verbunden. Prüfe die Supabase-Konfiguration.");
-    if (!isValidLobbyCode(code)) return showStatus("Ungültiger Lobby-Code (5 Zeichen, ohne 0/O/1/I).");
-
-    try {
-      const lobby = await loadLobby(code);
-      if (!lobby) return showStatus("Diese Lobby wurde nicht gefunden.");
+      const code = generateLobbyCode();
       const player = { id: supabaseReady ? state.supabaseUserId : createPlayerId(), name };
+      if (!player.id) {
+        showStatus("Multiplayer-Identität nicht verfügbar.");
+        return;
+      }
       state.currentPlayerId = player.id;
       state.lobbyCode = code;
-      state.hostId = lobby.hostId;
-      state.isHost = state.hostId === player.id;
-      state.players = [...lobby.players, player];
-      state.settings = { ...defaultSettings, ...lobby.settings };
-      state.round = lobby.round || null;
+      state.hostId = player.id;
+      state.isHost = true;
+      state.players = [player];
+      state.round = null;
       saveIdentity(player.id);
-      const joined = await addPlayerToLobby(player);
-      if (!joined) return;
-      if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
-      await loadLatestDetectiveMessage();
-      subscribeToLobby();
-      navigateToScreen("lobby", "forward");
-      render();
-    } catch (error) {
-      console.error("Lobby join failed:", error);
-      showStatus(error.message);
+      try {
+        if (supabaseReady) {
+          const synced = await syncToSupabase();
+          if (!synced) {
+            showStatus("Fehler beim Speichern. Versuche es erneut.");
+            return;
+          }
+          const joined = await addPlayerToLobby(player);
+          if (!joined) {
+            showStatus("Fehler beim Beitreten. Versuche es erneut.");
+            return;
+          }
+          subscribeToLobby();
+        }
+        state.statusMessage = "";
+        navigateToScreen("lobby", "forward");
+        render();
+      } catch (error) {
+        console.error("Lobby creation failed:", error);
+        showStatus(error.message || "Lobby konnte nicht erstellt werden.");
+      }
+      return;
     }
-  });
 
-  document.getElementById("leave-lobby-btn").addEventListener("click", () => {
-    showLeaveConfirmation();
-  });
-
-  document.getElementById("start-game-btn").addEventListener("click", async () => {
-    try {
-      if (!state.isHost) throw new Error("Nur der Host kann das Spiel starten.");
-      if (!state.lobbyCode) {
-        throw new Error("Erstelle zuerst eine Lobby.");
+    const joinBtn = event.target.closest("#join-lobby-btn");
+    if (joinBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const name = getPlayerName();
+      const code = document.getElementById("join-code-input").value.trim().toUpperCase();
+      if (!name || !code) {
+        showStatus("Gib deinen Namen und einen Lobby-Code ein.");
+        return;
+      }
+      if (!supabaseReady) {
+        showStatus("Multiplayer ist nicht verbunden. Prüfe die Supabase-Konfiguration.");
+        return;
+      }
+      if (!isValidLobbyCode(code)) {
+        showStatus("Ungültiger Lobby-Code (5 Zeichen, ohne 0/O/1/I).");
+        return;
       }
 
-      const roleCounts = computeRoleCounts(state.settings);
-
-      if (state.players.length < roleCounts.total + 1) {
-        throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
+      try {
+        const lobby = await loadLobby(code);
+        if (!lobby) {
+          showStatus("Diese Lobby wurde nicht gefunden.");
+          return;
+        }
+        const player = { id: supabaseReady ? state.supabaseUserId : createPlayerId(), name };
+        state.currentPlayerId = player.id;
+        state.lobbyCode = code;
+        state.hostId = lobby.hostId;
+        state.isHost = state.hostId === player.id;
+        state.players = [...lobby.players, player];
+        state.settings = { ...defaultSettings, ...lobby.settings };
+        state.round = lobby.round || null;
+        saveIdentity(player.id);
+        const joined = await addPlayerToLobby(player);
+        if (!joined) {
+          showStatus("Fehler beim Beitreten. Versuche es erneut.");
+          return;
+        }
+        if (lobby.roundId) await loadOwnRolePayload(lobby.roundId);
+        await loadLatestDetectiveMessage();
+        subscribeToLobby();
+        state.statusMessage = "";
+        navigateToScreen("lobby", "forward");
+        render();
+      } catch (error) {
+        console.error("Lobby join failed:", error);
+        showStatus(error.message || "Fehler beim Beitreten.");
       }
-
-      state.round = createGameRound(state.players, state.settings, roleCounts);
-      saveRound();
-      
-      // Navigate to role-loading screen
-      navigateToScreen("role-loading", "forward");
-      
-      // Publish roles to Supabase
-      await publishRolePayloads(state.round);
-    } catch (error) {
-      showStatus(error.message);
-      navigateToScreen("lobby", "backward");
+      return;
     }
-  });
 
-  document.getElementById("reset-lobby-btn").addEventListener("click", () => {
-    if (!state.isHost) return showStatus("Nur der Host kann eine neue Runde starten.");
-    state.round = null;
-    state.rolePayload = null;
-    state.detectiveMessage = "";
-    state.roundIdFromServer = null;
+    const leaveBtn = event.target.closest("#leave-lobby-btn");
+    if (leaveBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      showLeaveConfirmation();
+      return;
+    }
+
+    const startGameBtn = event.target.closest("#start-game-btn");
+    if (startGameBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleStartGame();
+      return;
+    }
+
+    const resetLobbyBtn = event.target.closest("#reset-lobby-btn");
+    if (resetLobbyBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleResetLobby();
+      return;
+    }
+  }, { capture: false });
+}
+
+async function handleStartGame() {
+  try {
+    if (!state.isHost) throw new Error("Nur der Host kann das Spiel starten.");
+    if (!state.lobbyCode) {
+      throw new Error("Erstelle zuerst eine Lobby.");
+    }
+
+    const roleCounts = computeRoleCounts(state.settings);
+
+    if (state.players.length < roleCounts.total + 1) {
+      throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
+    }
+
+    state.round = createGameRound(state.players, state.settings, roleCounts);
     saveRound();
-    navigateToScreen("lobby", "forward");
+    
+    // Navigate to role-loading screen
+    navigateToScreen("role-loading", "forward");
     render();
-  });
-
-  document.getElementById("player-list").addEventListener("click", (event) => {
-    if (!state.isHost) return;
-    const button = event.target.closest("[data-remove-id]");
-    if (!button) return;
-
-    const id = button.dataset.removeId;
-    state.players = state.players.filter((player) => player.id !== id);
-    savePlayers();
-    removePlayerFromLobby(id).then(() => refreshLobbyPlayers());
+    
+    // Publish roles to Supabase
+    await publishRolePayloads(state.round);
+  } catch (error) {
+    showStatus(error.message);
+    navigateToScreen("lobby", "backward");
     render();
-  });
+  }
+}
 
-  document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!state.isHost) return;
-      const target = button.dataset.target;
-      const action = button.dataset.action;
-      const current = Number(state.settings[target]);
-      const next = action === "increase" ? current + 1 : Math.max(0, current - 1);
-
-      state.settings[target] = next;
-      saveSettings();
-      syncToSupabase();
-      renderSettings();
-    });
-  });
-
-  const probInputs = [
-    ["jesterProbability", "jesterProbabilityValue", "jesterRandomEnabled"],
-    ["detectiveProbability", "detectiveProbabilityValue", "detectiveRandomEnabled"],
-    ["doppelgangerProbability", "doppelgangerProbabilityValue", "doppelgangerRandomEnabled"],
-  ];
-
-  probInputs.forEach(([rangeId, outputId, toggleId]) => {
-    const range = document.getElementById(rangeId);
-    const output = document.getElementById(outputId);
-    const toggle = document.getElementById(toggleId);
-
-    range.addEventListener("input", () => {
-      if (!state.isHost) return;
-      const configKey = rangeId;
-      state.settings[configKey] = Number(range.value);
-      output.textContent = `${range.value}%`;
-      saveSettings();
-      syncToSupabase();
-    });
-
-    toggle.addEventListener("change", () => {
-      if (!state.isHost) return;
-      const configKey = toggleId;
-      state.settings[configKey] = toggle.checked;
-      saveSettings();
-      syncToSupabase();
-    });
-  });
-
-  document.getElementById("difficulty-select").addEventListener("change", (event) => {
-    if (!state.isHost) return;
-    state.settings.difficulty = event.target.value;
-    saveSettings();
-    syncToSupabase();
-  });
-
+async function handleResetLobby() {
+  if (!state.isHost) {
+    showStatus("Nur der Host kann eine neue Runde starten.");
+    return;
+  }
+  state.round = null;
+  state.rolePayload = null;
+  state.detectiveMessage = "";
+  state.roundIdFromServer = null;
+  saveRound();
+  navigateToScreen("lobby", "forward");
+  render();
 }
 
 function initializeTheme() {
@@ -1283,8 +1283,10 @@ function generateLobbyCode() {
 
 function showStatus(message) {
   state.statusMessage = message;
-  const status = document.getElementById("round-status");
-  if (status) status.textContent = message;
+  const statusEl = document.getElementById("status-message");
+  if (statusEl) statusEl.textContent = message;
+  const roundStatus = document.getElementById("round-status");
+  if (roundStatus) roundStatus.textContent = message;
 }
 
 function escapeHtml(value) {
