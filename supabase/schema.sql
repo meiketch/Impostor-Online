@@ -122,7 +122,10 @@ create policy "player_rounds_insert" on public.player_rounds
     exists (select 1 from public.game_state g where g.id = lobby_code and g.host_id = auth.uid()::text)
   );
 create policy "player_rounds_update" on public.player_rounds
-  for update using (player_id = auth.uid()::text);
+  for update using (
+    player_id = auth.uid()::text
+    or exists (select 1 from public.game_state g where g.id = lobby_code and g.host_id = auth.uid()::text)
+  );
 create policy "player_rounds_delete" on public.player_rounds
   for delete using (
     exists (select 1 from public.game_state g where g.id = lobby_code and g.host_id = auth.uid()::text)

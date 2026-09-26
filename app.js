@@ -1236,7 +1236,7 @@ function subscribeToLobby() {
     .on("postgres_changes", { event: "*", schema: "public", table: "lobby_players", filter: `lobby_code=eq.${state.lobbyCode}` }, () => {
       refreshLobbyPlayers();
     })
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "player_rounds", filter: `player_id=eq.${state.currentPlayerId}` }, (payload) => {
+    .on("postgres_changes", { event: "*", schema: "public", table: "player_rounds", filter: `player_id=eq.${state.currentPlayerId}` }, (payload) => {
       if (!payload.new || !payload.new.payload) return;
       state.rolePayload = payload.new.payload;
       render();
