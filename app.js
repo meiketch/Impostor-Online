@@ -1380,9 +1380,10 @@ async function publishRolePayloads(round) {
     console.warn("Fehler beim Löschen alter Rollen-Zeilen:", deleteError);
   }
 
+  // Nach dem DELETE direkt INSERT (keine upsert), um INSERT-Policy zu garantieren
   const { error } = await supabaseClient
     .from("player_rounds")
-    .upsert(rows, { onConflict: "lobby_code,player_id,round_id" });
+    .insert(rows);
 
   if (error) {
     // Debug: Prüfe, ob game_state Zeile mit der game_state mit korrektem host_id existiert
