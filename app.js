@@ -694,14 +694,35 @@ async function handleNewRound() {
     showStatus("Nur der Host kann eine neue Runde starten.");
     return;
   }
-  state.round = null;
-  state.rolePayload = null;
-  state.detectiveMessage = "";
-  state.roundIdFromServer = null;
-  state.statusMessage = "";
-  saveRound();
-  navigateToScreen("lobby", "forward");
-  render();
+  
+  try {
+    const roleCounts = computeRoleCounts(state.settings);
+
+    if (state.players.length < roleCounts.total + 1) {
+      throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
+    }
+
+    state.round = createGameRound(state.players, state.settings, roleCounts);
+    saveRound();
+    
+    // Sync to Supabase to notify other players
+    const synced = await syncToSupabase();
+    if (!synced) {
+      showStatus("Fehler beim Speichern der neuen Runde.");
+      state.round = null;
+      return;
+    }
+    
+    // Navigate to role-loading screen
+    navigateToScreen("role-loading", "forward");
+    render();
+    
+    // Publish roles to Supabase
+    await publishRolePayloads(state.round);
+  } catch (error) {
+    showStatus(error.message);
+    render();
+  }
 }
 
 // Global event listeners for input/range changes
@@ -1728,20 +1749,11 @@ async function publishRolePayloads(round) {
     payload: rolePayloads[player.id] || { key: "player", label: "Spieler", message: "Du hast keine geheime Info." },
   }));
 
-  // Alte Runden-Zeilen der Lobby zuerst entfernen, damit nichts Altlastiges übrig bleibt.
-  const { error: deleteError } = await supabaseClient
-    .from("player_rounds")
-    .delete()
-    .eq("lobby_code", state.lobbyCode);
-  
-  if (deleteError) {
-    console.warn("Fehler beim Löschen alter Rollen-Zeilen:", deleteError);
-  }
-
-  // Nach dem DELETE direkt INSERT (keine upsert), um INSERT-Policy zu garantieren
+  // Use UPSERT instead of DELETE+INSERT for atomic operation
+  // This avoids race conditions and duplicate key errors
   const { error } = await supabaseClient
     .from("player_rounds")
-    .insert(rows);
+    .upsert(rows, { onConflict: "lobby_code,player_id" });
 
   if (error) {
     // Debug: Prüfe, ob game_state Zeile mit der game_state mit korrektem host_id existiert
