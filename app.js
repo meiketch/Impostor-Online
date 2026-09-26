@@ -587,6 +587,22 @@ function bindEvents() {
       handleResetLobby();
       return;
     }
+    // Settings control buttons (increase/decrease counters)
+    const controlBtn = event.target.closest("[data-action][data-target]");
+    if (controlBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.isHost) return;
+      const target = controlBtn.dataset.target;
+      const action = controlBtn.dataset.action;
+      const current = Number(state.settings[target]) || 0;
+      const next = action === "increase" ? current + 1 : Math.max(0, current - 1);
+      state.settings[target] = next;
+      saveSettings();
+      syncToSupabase();
+      renderSettings();
+      return;
+    }
   }, { capture: false });
 }
 
@@ -632,6 +648,45 @@ async function handleResetLobby() {
   navigateToScreen("lobby", "forward");
   render();
 }
+
+// Global event listeners for input/range changes
+document.addEventListener("input", (event) => {
+  if (!state.isHost) return;
+  
+  // Handle range inputs for probabilities
+  const rangeInput = event.target;
+  if (rangeInput.type === "range") {
+    const configKey = rangeInput.id;
+    if (!configKey) return;
+    state.settings[configKey] = Number(rangeInput.value);
+    const outputEl = document.getElementById(`${configKey}Value`);
+    if (outputEl) outputEl.textContent = `${rangeInput.value}%`;
+    saveSettings();
+    syncToSupabase();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  if (!state.isHost) return;
+  
+  // Handle checkboxes
+  if (event.target.type === "checkbox") {
+    const configKey = event.target.id;
+    if (!configKey) return;
+    state.settings[configKey] = event.target.checked;
+    saveSettings();
+    syncToSupabase();
+  }
+  
+  // Handle select dropdowns
+  if (event.target.tagName === "SELECT") {
+    if (event.target.id === "difficulty-select") {
+      state.settings.difficulty = event.target.value;
+      saveSettings();
+      syncToSupabase();
+    }
+  }
+});
 
 function initializeTheme() {
   const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) || "meme";
