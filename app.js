@@ -587,6 +587,23 @@ function bindEvents() {
       handleResetLobby();
       return;
     }
+
+    const endGameBtn = event.target.closest("#end-game-btn");
+    if (endGameBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleEndGame();
+      return;
+    }
+
+    const newRoundBtn = event.target.closest("#new-round-btn");
+    if (newRoundBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleNewRound();
+      return;
+    }
+    
     // Settings control buttons (increase/decrease counters)
     const controlBtn = event.target.closest("[data-action][data-target]");
     if (controlBtn) {
@@ -622,6 +639,14 @@ async function handleStartGame() {
     state.round = createGameRound(state.players, state.settings, roleCounts);
     saveRound();
     
+    // Sync to Supabase to notify other players
+    const synced = await syncToSupabase();
+    if (!synced) {
+      showStatus("Fehler beim Speichern des Spielstarts.");
+      state.round = null;
+      return;
+    }
+    
     // Navigate to role-loading screen
     navigateToScreen("role-loading", "forward");
     render();
@@ -644,6 +669,36 @@ async function handleResetLobby() {
   state.rolePayload = null;
   state.detectiveMessage = "";
   state.roundIdFromServer = null;
+  saveRound();
+  navigateToScreen("lobby", "forward");
+  render();
+}
+
+async function handleEndGame() {
+  if (!state.isHost) {
+    showStatus("Nur der Host kann das Spiel beenden.");
+    return;
+  }
+  state.round = null;
+  state.rolePayload = null;
+  state.detectiveMessage = "";
+  state.roundIdFromServer = null;
+  state.statusMessage = "Spiel beendet.";
+  saveRound();
+  navigateToScreen("lobby", "backward");
+  render();
+}
+
+async function handleNewRound() {
+  if (!state.isHost) {
+    showStatus("Nur der Host kann eine neue Runde starten.");
+    return;
+  }
+  state.round = null;
+  state.rolePayload = null;
+  state.detectiveMessage = "";
+  state.roundIdFromServer = null;
+  state.statusMessage = "";
   saveRound();
   navigateToScreen("lobby", "forward");
   render();
@@ -1145,6 +1200,12 @@ async function removePlayerFromLobby(playerId) {
 function renderRoundSummary() {
   const status = document.getElementById("round-status");
   const summary = document.getElementById("round-summary");
+  const hostGameControls = document.getElementById("host-game-controls");
+  
+  if (hostGameControls) {
+    // Show host game controls on game screen if this is a round
+    hostGameControls.classList.toggle("hidden", !state.isHost || !state.round);
+  }
   
   if (!status || !summary) return; // Elements don't exist on this screen
 
@@ -1514,7 +1575,12 @@ function subscribeToLobby() {
       state.hostId = row.host_id || state.hostId;
       state.isHost = state.hostId === state.currentPlayerId;
       state.roundIdFromServer = row.round_id || null;
+      
       if (row.round_id) {
+        // Spiel wurde gestartet - zur role-loading screen navigieren
+        if (state.currentScreen === "lobby") {
+          navigateToScreen("role-loading", "forward");
+        }
         if (!state.rolePayload) loadOwnRolePayload(row.round_id);
       } else if (!state.round) {
         state.rolePayload = null;
