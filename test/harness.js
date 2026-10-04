@@ -25,6 +25,12 @@ function stubElement() {
     listeners: {},
     setAttribute() {},
     getAttribute() { return null; },
+    focus() { documentStub.activeElement = el; },
+    setSelectionRange(start, end, direction) {
+      el.selectionStart = start;
+      el.selectionEnd = end;
+      el.selectionDirection = direction;
+    },
     addEventListener(type, fn) { (el.listeners[type] ||= []).push(fn); },
     querySelectorAll() { return []; },
   };
@@ -153,8 +159,23 @@ ok(byRole.jester.message.includes("rausvoten"), "jester sees goal + word");
 ok(byRole.detective.message.includes("Deine Items"), "detective sees items");
   ok(!byRole.detective.message.includes("Item-Pool ("), "detective does not see the duplicate item pool");
   ok(byRole.player.message.includes("Detektiv-Item-Pool"), "other roles retain the shared item pool");
+const detectiveId = round2.detectives[0];
+round2.detectiveItemsMap[detectiveId] = ["🚫 Extra-Wort: Der DT bestimmt ein zusätzliches verbotenes Wort."];
+const gatedPayload = ctx.buildRolePayloads(round2, players.slice(0, 6), mixedSettings)[detectiveId];
+ok(gatedPayload.canSendDetectiveMessage, "Extra-Wort enables the detective message");
+round2.detectiveItemsMap[detectiveId] = ["⚖️ Zwangsvote: Der DT erzwingt sofort eine Abstimmung."];
+const ungatedPayload = ctx.buildRolePayloads(round2, players.slice(0, 6), mixedSettings)[detectiveId];
+ok(!ungatedPayload.canSendDetectiveMessage, "other items do not enable the detective message");
 ok(!byRole.doppelganger.message.includes(round2.word), "doppelganger sees nothing secret");
 ok(!byRole.doppelganger.message.includes("Impostoren:"), "doppelganger gets no shared meta");
+
+console.log("Test: role card section order");
+const playerSections = ctx.getRoleCardSections(byRole.player);
+ok(playerSections.focus[0].label === "Gesuchtes Wort" && playerSections.focus[0].value === round2.word, "word is the first role detail");
+ok(playerSections.roles.some((line) => line.startsWith("Detektiv:")), "roles are grouped after the word");
+ok(playerSections.items.length > 0, "detective item pool is the final role section");
+const impostorSections = ctx.getRoleCardSections(byRole.impostor);
+ok(impostorSections.focus[0].label === "Deine Hilfswörter", "impostor clues are shown as the first role detail");
 
   console.log("Test: game panel routine status");
   vm.runInContext('state.roundIdFromServer = "active-round"; state.statusMessage = "";', ctx);
@@ -174,6 +195,7 @@ ok(!byRole.doppelganger.message.includes("Impostoren:"), "doppelganger gets no s
     let latestMessage = { message: detectiveMessage };
     const latestMessageQuery = {
       select() { return this; },
+      delete() { latestMessage = null; return this; },
       eq() { return this; },
       order() { return this; },
       limit() { return this; },
@@ -186,8 +208,27 @@ ok(!byRole.doppelganger.message.includes("Impostoren:"), "doppelganger gets no s
     latestMessage = null;
     await ctx.loadLatestDetectiveMessage();
     ok(vm.runInContext('state.detectiveMessage === ""', ctx), "database poll clears a removed message");
+    latestMessage = { message: detectiveMessage };
+    await ctx.loadLatestDetectiveMessage();
+    ok(await ctx.clearDetectiveMessages(), "new round deletes old detective messages");
+    ok(vm.runInContext('state.detectiveMessage === ""', ctx), "deleted round message is cleared in memory");
     vm.runInContext('supabaseReady = false; supabaseClient = null; state.lobbyCode = null;', ctx);
   }
+
+  console.log("Test: detective editor focus");
+  const editor = documentStub.getElementById("detective-message-input");
+  editor.value = "Nachricht weiter schreiben";
+  editor.selectionStart = 12;
+  editor.selectionEnd = 12;
+  editor.selectionDirection = "none";
+  documentStub.activeElement = editor;
+  vm.runInContext(`state.currentPlayerId = ${JSON.stringify(detectiveId)}; state.players = ${JSON.stringify(players)}; state.rolePayload = ${JSON.stringify(gatedPayload)}; state.round = null; state.detectiveMessage = "";`, ctx);
+  ctx.renderPrivateRoleCard();
+  ok(documentStub.activeElement === editor, "re-render keeps the detective editor focused");
+  ok(editor.selectionStart === 12 && editor.selectionEnd === 12, "re-render preserves the text cursor");
+  vm.runInContext(`state.rolePayload = ${JSON.stringify(ungatedPayload)};`, ctx);
+  ctx.renderPrivateRoleCard();
+  ok(!documentStub.getElementById("private-role-card").innerHTML.includes("detective-message-editor"), "editor is hidden without Extra-Wort");
 
 async function testOnlineOnlyPlay() {
   console.log("Test: online-only play");

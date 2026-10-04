@@ -479,6 +479,8 @@ const state = {
 let supabaseClient = null;
 let subscriptionChannel = null;
 let supabaseReady = false;
+let detectiveMessageFetchId = 0;
+let detectiveMessageClearPending = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   initializeTheme();
@@ -859,6 +861,8 @@ async function handleStartGame() {
       throw new Error(`Nicht genügend Spieler (${state.players.length}) für die Rollenverteilung (${roleCounts.total + 1}).`);
     }
 
+    state.statusMessage = "";
+    if (!await clearDetectiveMessages()) return;
     console.log("Creating game round...");
     state.round = createGameRound(state.players, state.settings, roleCounts);
     console.log("Round created:", state.round?.id);
@@ -897,7 +901,7 @@ async function handleEndGame() {
   state.rolePayload = null;
   state.detectiveMessage = "";
   state.roundIdFromServer = null;
-  state.statusMessage = "Spiel beendet.";
+  state.statusMessage = "";
   await syncToSupabase();
   navigateToScreen("lobby", "backward");
   render();
@@ -920,6 +924,8 @@ async function handleNewRound() {
       throw new Error("Nicht genügend Spieler für die Rollenverteilung.");
     }
 
+    state.statusMessage = "";
+    if (!await clearDetectiveMessages()) return;
     state.round = createGameRound(state.players, state.settings, roleCounts);
     
     // Sync to Supabase to notify other players (publishes roles internally)
@@ -1274,6 +1280,10 @@ function renderPrivateRoleCard() {
   
   const existingInput = document.getElementById("detective-message-input");
   const draftMessage = existingInput ? existingInput.value : null;
+  const inputHadFocus = existingInput && document.activeElement === existingInput;
+  const selectionStart = existingInput?.selectionStart ?? null;
+  const selectionEnd = existingInput?.selectionEnd ?? null;
+  const selectionDirection = existingInput?.selectionDirection ?? "none";
   if (!state.currentPlayerId) {
     card.classList.add("empty-state");
     card.textContent = "Nach dem Spielstart erscheint hier nur deine eigene Rolle.";
@@ -1299,18 +1309,42 @@ function renderPrivateRoleCard() {
   const badgeClass = `role-${role.key}`;
   const detectiveMessage = state.detectiveMessage || "";
   const visibleDetectiveMessage = getDetectiveMessageForRole(detectiveMessage, role.key);
+  const canSendMessage = isDetectiveMessageEnabled(role);
+  const roleSections = getRoleCardSections(role);
   card.classList.remove("empty-state");
   card.innerHTML = `
     <span class="role-badge ${badgeClass}">${role.label}</span>
     <h3>${escapeHtml(player.name)}</h3>
-    <div class="role-info">${escapeHtml(role.message).replace(/\n/g, "<br>")}</div>
+    ${roleSections.focus.length ? `
+      <section class="role-card-section role-focus">
+        ${roleSections.focus.map((item) => `
+          <div class="role-focus-item">
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${escapeHtml(item.value)}</strong>
+          </div>
+        `).join("")}
+      </section>
+    ` : ""}
+    ${roleSections.roles.length ? `
+      <section class="role-card-section role-overview">
+        <h4>Rollen in dieser Runde</h4>
+        <ul>${roleSections.roles.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+      </section>
+    ` : ""}
+    ${roleSections.note ? `<p class="role-note">${escapeHtml(roleSections.note)}</p>` : ""}
+    ${roleSections.items.length ? `
+      <section class="role-card-section role-detective-items">
+        <h4>Detektiv-Items</h4>
+        <ul>${roleSections.items.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+      </section>
+    ` : ""}
     ${detectiveMessage ? `
       <div class="detective-chat-bubble ${visibleDetectiveMessage === detectiveMessage ? "is-readable" : "is-redacted"}" aria-label="Detektiv-Nachricht">
         <span class="chat-label">Detektiv</span>
         <span class="chat-message">${escapeHtml(visibleDetectiveMessage).replace(/\n/g, "<br>")}</span>
       </div>
     ` : ""}
-    ${role.key === "detective" ? `
+    ${canSendMessage ? `
       <div class="detective-message-editor">
         <label for="detective-message-input">Nachricht an die Mitspieler</label>
         <textarea id="detective-message-input" rows="3" aria-label="Detektiv-Nachricht" placeholder="${detectiveDefaultMessage}"></textarea>
@@ -1322,7 +1356,49 @@ function renderPrivateRoleCard() {
   if (messageInput) {
     messageInput.value = draftMessage !== null ? draftMessage : detectiveMessage;
     messageInput.placeholder = detectiveDefaultMessage;
+    if (inputHadFocus) {
+      messageInput.focus({ preventScroll: true });
+      if (selectionStart !== null && selectionEnd !== null) {
+        messageInput.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+      }
+    }
   }
+}
+
+function getRoleCardSections(role) {
+  if (role.key === "doppelganger") {
+    return { focus: [], focusHeading: "", roles: [], items: [], note: role.message };
+  }
+
+  const focus = [];
+  const roles = [];
+  const items = [];
+  let readingItems = false;
+  for (const line of String(role.message || "").split("\n")) {
+    const focusMatch = line.match(/^(Gesuchtes Wort|Deine Hilfswörter|Ziel):\s*(.*)$/);
+    if (focusMatch) {
+      focus.push({ label: focusMatch[1], value: focusMatch[2] });
+      readingItems = false;
+    } else if (/^(Deine Items:|Item-Pool \(|Detektiv-Item-Pool \()/.test(line)) {
+      readingItems = true;
+    } else if (readingItems && line.startsWith("- ")) {
+      items.push(line.slice(2));
+    } else {
+      readingItems = false;
+      if (line) roles.push(line);
+    }
+  }
+
+  return {
+    focus,
+    roles,
+    items,
+    note: "",
+  };
+}
+
+function isDetectiveMessageEnabled(role) {
+  return role?.key === "detective" && Boolean(role.canSendDetectiveMessage);
 }
 
 function getDetectiveMessageForRole(message, roleKey) {
@@ -1332,10 +1408,8 @@ function getDetectiveMessageForRole(message, roleKey) {
 document.addEventListener("click", async (event) => {
   if (event.target.id !== "send-detective-message-btn") return;
   if (!state.currentPlayerId) return;
-  const isDetective = state.round
-    ? state.round.detectives.includes(state.currentPlayerId)
-    : Boolean(state.rolePayload && state.rolePayload.key === "detective");
-  if (!isDetective) return;
+  const role = state.rolePayload || (state.round ? getPlayerRoleInfo(state.currentPlayerId, state.round) : null);
+  if (!isDetectiveMessageEnabled(role)) return;
 
   const message = document.getElementById("detective-message-input").value.trim();
   if (!supabaseReady || !supabaseClient || !state.lobbyCode) {
@@ -1383,34 +1457,12 @@ async function removePlayerFromLobby(playerId) {
 }
 
 function renderRoundSummary() {
-  const status = document.getElementById("round-status");
-  const summary = document.getElementById("round-summary");
   const hostGameControls = document.getElementById("host-game-controls");
-
-  // state.round only exists locally for the host; every player relies on
-  // roundIdFromServer to know whether a round is actually live.
   const roundActive = Boolean(state.roundIdFromServer);
 
   if (hostGameControls) {
     hostGameControls.classList.toggle("hidden", !state.isHost || !roundActive);
   }
-  
-  if (!status || !summary) return; // Elements don't exist on this screen
-
-  if (state.statusMessage) {
-    status.textContent = state.statusMessage;
-    summary.innerHTML = "";
-    return;
-  }
-
-  if (!roundActive) {
-    status.textContent = "";
-    summary.innerHTML = "";
-    return;
-  }
-
-  status.textContent = "";
-  summary.innerHTML = `<span class="round-live">● LIVE</span><br><span>${state.players.length} Spieler sind dabei.</span>`;
 }
 
 function getPlayerRoleInfo(playerId, round) {
@@ -1441,7 +1493,8 @@ function getPlayerRoleInfo(playerId, round) {
     return {
       key: "detective",
       label: "Detektiv",
-      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, `Item-Pool (wie viele du nutzt, entscheidet die Gruppe):\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
+      message: [sharedRoleText, `Gesuchtes Wort: ${round.word}`, `Deine Items:\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
+      canSendDetectiveMessage: items.some((item) => item.includes("Extra-Wort")),
     };
   }
 
@@ -1510,6 +1563,7 @@ function buildRolePayloads(round, players, settings) {
       key: "detective",
       label: "Detektiv",
       message: [detectiveSharedRoleText, `Gesuchtes Wort: ${round.word}`, `Deine Items:\n- ${items.join("\n- ") || "Keine Items"}`].filter(Boolean).join("\n"),
+      canSendDetectiveMessage: items.some((item) => item.includes("Extra-Wort")),
     };
   });
 
@@ -1666,8 +1720,6 @@ function showStatus(message) {
   state.statusMessage = message;
   const statusEl = document.getElementById("status-message");
   if (statusEl) statusEl.textContent = message;
-  const roundStatus = document.getElementById("round-status");
-  if (roundStatus) roundStatus.textContent = message;
 }
 
 function escapeHtml(value) {
@@ -1805,7 +1857,7 @@ function subscribeToLobby() {
       render();
     })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "lobby_messages", filter: `lobby_code=eq.${state.lobbyCode}` }, (payload) => {
-      if (!payload.new || typeof payload.new.message !== "string") return;
+      if (detectiveMessageClearPending || !payload.new || typeof payload.new.message !== "string") return;
       updateDetectiveMessage(payload.new.message);
     })
     .subscribe();
@@ -1879,12 +1931,14 @@ async function loadOwnRolePayload(roundId) {
 }
 
 async function loadLatestDetectiveMessage() {
-  if (!supabaseReady || !supabaseClient || !state.lobbyCode) return;
+  if (!supabaseReady || !supabaseClient || !state.lobbyCode || detectiveMessageClearPending) return;
+  const fetchId = ++detectiveMessageFetchId;
+  const lobbyCode = state.lobbyCode;
   try {
     const { data, error } = await supabaseClient
       .from("lobby_messages")
       .select("message")
-      .eq("lobby_code", state.lobbyCode)
+      .eq("lobby_code", lobbyCode)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1892,9 +1946,34 @@ async function loadLatestDetectiveMessage() {
       console.warn("Detective message read failed:", error);
       return;
     }
+    if (fetchId !== detectiveMessageFetchId || lobbyCode !== state.lobbyCode || detectiveMessageClearPending) return;
     updateDetectiveMessage(data?.message || "");
   } catch (error) {
     console.warn("Detective message read failed:", error);
+  }
+}
+
+async function clearDetectiveMessages() {
+  if (!supabaseReady || !supabaseClient || !state.lobbyCode) return false;
+  detectiveMessageClearPending = true;
+  detectiveMessageFetchId += 1;
+  try {
+    const { error } = await supabaseClient
+      .from("lobby_messages")
+      .delete()
+      .eq("lobby_code", state.lobbyCode);
+    if (error) {
+      showStatus(`Alte Detektivnachrichten konnten nicht gelöscht werden: ${error.message}`);
+      return false;
+    }
+    detectiveMessageFetchId += 1;
+    updateDetectiveMessage("");
+    return true;
+  } catch (error) {
+    showStatus(`Alte Detektivnachrichten konnten nicht gelöscht werden: ${error.message}`);
+    return false;
+  } finally {
+    detectiveMessageClearPending = false;
   }
 }
 
