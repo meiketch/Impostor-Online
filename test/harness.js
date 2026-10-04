@@ -151,7 +151,64 @@ ok(byRole.impostor.message.includes("Hilfswörter"), "impostor payload has clue 
 ok(byRole.player.message.includes("Gesuchtes Wort: " + round2.word), "normal player sees the word");
 ok(byRole.jester.message.includes("rausvoten"), "jester sees goal + word");
 ok(byRole.detective.message.includes("Deine Items"), "detective sees items");
+  ok(!byRole.detective.message.includes("Item-Pool ("), "detective does not see the duplicate item pool");
+  ok(byRole.player.message.includes("Detektiv-Item-Pool"), "other roles retain the shared item pool");
 ok(!byRole.doppelganger.message.includes(round2.word), "doppelganger sees nothing secret");
 ok(!byRole.doppelganger.message.includes("Impostoren:"), "doppelganger gets no shared meta");
 
-console.log(`\nALL ${passed} TESTS PASSED`);
+  console.log("Test: game panel routine status");
+  vm.runInContext('state.roundIdFromServer = "active-round"; state.statusMessage = "";', ctx);
+  ctx.renderRoundSummary();
+  ok(documentStub.getElementById("round-status").textContent === "", "routine round status is hidden");
+
+  console.log("Test: detective message visibility");
+  const detectiveMessage = "Geheime Nachricht";
+  for (const role of ["detective", "jester", "player"]) {
+    ok(ctx.getDetectiveMessageForRole(detectiveMessage, role) === detectiveMessage, `${role} sees the message`);
+  }
+  for (const role of ["impostor", "doppelganger"]) {
+    ok(ctx.getDetectiveMessageForRole(detectiveMessage, role) === "████████████", `${role} sees only the redaction`);
+  }
+
+  async function testDetectiveMessageDelivery() {
+    let latestMessage = { message: detectiveMessage };
+    const latestMessageQuery = {
+      select() { return this; },
+      eq() { return this; },
+      order() { return this; },
+      limit() { return this; },
+      async maybeSingle() { return { data: latestMessage, error: null }; },
+    };
+    ctx.mockSupabase = { from: () => latestMessageQuery };
+    vm.runInContext('supabaseReady = true; state.lobbyCode = "ABC23"; supabaseClient = mockSupabase;', ctx);
+    await ctx.loadLatestDetectiveMessage();
+    ok(vm.runInContext("state.detectiveMessage", ctx) === detectiveMessage, "database poll delivers the latest message");
+    latestMessage = null;
+    await ctx.loadLatestDetectiveMessage();
+    ok(vm.runInContext('state.detectiveMessage === ""', ctx), "database poll clears a removed message");
+    vm.runInContext('supabaseReady = false; supabaseClient = null; state.lobbyCode = null;', ctx);
+  }
+
+async function testOnlineOnlyPlay() {
+  console.log("Test: online-only play");
+  ok(await ctx.syncToSupabase() === false, "Supabase sync is unavailable without a connection");
+  const originalConsoleError = ctx.console.error;
+  ctx.console.error = () => {};
+  try {
+    await ctx.handleStartGame();
+  } finally {
+    ctx.console.error = originalConsoleError;
+  }
+  ok(vm.runInContext("state.round", ctx) === null, "a round cannot start without Supabase");
+  console.log(`\nALL ${passed} TESTS PASSED`);
+}
+
+async function runAsyncTests() {
+  await testDetectiveMessageDelivery();
+  await testOnlineOnlyPlay();
+}
+
+runAsyncTests().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

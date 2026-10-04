@@ -8,7 +8,7 @@ Die veröffentlichte Anwendung findest du hier:
 
 https://meiketch.github.io/Impostor-Online/
 
-Falls die Seite nach einem Update noch die alte Version zeigt, lade sie mit `Strg+F5` neu.
+Die App lädt ihre Dateien bei jedem Besuch frisch vom Netzwerk. Änderungen können nach einem Deployment kurz brauchen, bis sie über GitHub Pages überall verfügbar sind.
 
 ## Spielen
 
@@ -76,6 +76,6 @@ Seit dem Refactor werden **keine geheimen Spieldaten mehr an alle Clients vertei
 
 Grenze: Eine statische GitHub-Pages-Seite kann einen technisch versierten Mitspieler, der aktiv nach Geheimnissen sucht, nicht hundertprozentig aussperren – dafür bräuchte es serverseitige Logik (z. B. Supabase Edge Functions). Der Standardweg (eigene Rolle sehen, andere Rollen nicht) ist jetzt abgesichert.
 
-### Ohne Supabase
+### Voraussetzungen
 
-Ohne gültige `supabase-config.js` läuft das Spiel weiterhin komplett **lokal im Browser** (eine Runde auf einem Gerät, Sync über localStorage-Tabs).
+Zum Spielen werden eine Internetverbindung und eine gültige `supabase-config.js` benötigt. Ohne erreichbares Supabase-Projekt können keine Lobby erstellt, betreten oder gespielt werden. Die App funktioniert nicht offline.
