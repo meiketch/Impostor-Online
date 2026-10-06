@@ -10,6 +10,7 @@ const defaultSettings = {
   itemsPerDetective: 1,
   doppelgangerCount: 0,
   difficulty: "random",
+  difficultyMaxEnabled: false,
   jesterProbability: 25,
   detectiveProbability: 25,
   doppelgangerProbability: 0,
@@ -1250,6 +1251,12 @@ function renderSettings() {
   const difficultySelectEl = document.getElementById("difficulty-select");
   if (difficultySelectEl) difficultySelectEl.value = state.settings.difficulty || "random";
 
+  const difficultyMaxEl = document.getElementById("difficultyMaxEnabled");
+  if (difficultyMaxEl) difficultyMaxEl.checked = !!state.settings.difficultyMaxEnabled;
+
+  const difficultyLabelEl = document.getElementById("difficulty-select-label");
+  if (difficultyLabelEl) difficultyLabelEl.textContent = state.settings.difficultyMaxEnabled ? "Maximaler Schwierigkeitsgrad" : "Schwierigkeitsgrad";
+
   const jesterProbValueEl = document.getElementById("jesterProbabilityValue");
   if (jesterProbValueEl) jesterProbValueEl.textContent = `${state.settings.jesterProbability}%`;
   
@@ -1269,7 +1276,7 @@ function renderSettings() {
   if (doppelgangerRandomEl) doppelgangerRandomEl.checked = !!state.settings.doppelgangerRandomEnabled;
 
   state.detectiveMessage = state.settings.detectiveMessage || state.detectiveMessage || "";
-  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select").forEach((control) => {
+  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select, #difficultyMaxEnabled").forEach((control) => {
     control.disabled = !state.isHost;
   });
 }
@@ -1678,11 +1685,27 @@ function computeRoleCounts(settings) {
   return { impostors, jesters, detectives, doppelgangers, total: impostors + jesters + detectives + doppelgangers };
 }
 
-function selectGameWord() {
-  const difficulty = state.settings?.difficulty || "random";
-  const activeDeck = difficulty === "random"
-    ? state.wordDeck
-    : state.wordDeckByDifficulty[difficulty] || state.wordDeck;
+// Reihenfolge der Schwierigkeitsgrade, damit "Als Maximum" alles bis zum gewählten Grad einschließen kann.
+const DIFFICULTY_ORDER = ["easy", "medium", "hard", "veryHard"];
+
+function selectGameWord(options = {}) {
+  const settings = options.settings || state.settings || {};
+  const deckByDifficulty = options.deckByDifficulty || state.wordDeckByDifficulty;
+  const fullDeck = options.wordDeck || state.wordDeck;
+  const difficulty = settings.difficulty || "random";
+  let activeDeck;
+
+  if (difficulty === "random") {
+    activeDeck = fullDeck;
+  } else if (settings.difficultyMaxEnabled) {
+    // "Als Maximum": Wörter aus dem gewählten Grad ODER darunter, zufällig gemischt.
+    const maxIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+    const levels = maxIndex === -1 ? [] : DIFFICULTY_ORDER.slice(0, maxIndex + 1);
+    activeDeck = levels.flatMap((level) => deckByDifficulty[level] || []);
+  } else {
+    // Nur ein Level: Wörter ausschließlich aus dem gewählten Grad.
+    activeDeck = deckByDifficulty[difficulty] || fullDeck;
+  }
 
   if (!activeDeck || !activeDeck.length) {
     return { word: "Baum", clues: ["Wald", "Blätter", "Stamm", "Natur", "Holz"] };
