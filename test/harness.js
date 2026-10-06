@@ -111,6 +111,38 @@ assert.strictEqual(JSON.stringify(counts), JSON.stringify({ impostors: 2, jester
 passed += 1;
 console.log("  ✓ deterministic counts match config");
 
+console.log("Test: selectGameWord — difficulty modes");
+const testDecks = {
+  easy: [{ word: "E1", clues: [] }],
+  medium: [{ word: "M1", clues: [] }],
+  hard: [{ word: "H1", clues: [] }],
+  veryHard: [{ word: "V1", clues: [] }],
+};
+const testFullDeck = Object.values(testDecks).flat();
+
+// Nur ein Level (Checkbox aus): ausschließlich der gewählte Grad.
+const singleWords = new Set();
+for (let i = 0; i < 30; i += 1) {
+  singleWords.add(ctx.selectGameWord({ settings: { difficulty: "hard" }, deckByDifficulty: testDecks, wordDeck: testFullDeck }).word);
+}
+ok(singleWords.size === 1 && singleWords.has("H1"), "single-level mode draws ONLY from the chosen level");
+
+// Als Maximum (Checkbox an): gewählter Grad ODER darunter, nie darüber.
+const maxWords = new Set();
+for (let i = 0; i < 60; i += 1) {
+  maxWords.add(ctx.selectGameWord({ settings: { difficulty: "hard", difficultyMaxEnabled: true }, deckByDifficulty: testDecks, wordDeck: testFullDeck }).word);
+}
+ok(!maxWords.has("V1"), "max mode never draws above the chosen level");
+ok(maxWords.has("H1") && maxWords.has("M1") && maxWords.has("E1"), "max mode draws from chosen level and below");
+ok(maxWords.size === 3, "max mode pool == all levels up to chosen level");
+
+// "Zufällig" bleibt unabhängig von der Checkbox das gesamte Deck.
+const randomWords = new Set();
+for (let i = 0; i < 60; i += 1) {
+  randomWords.add(ctx.selectGameWord({ settings: { difficulty: "random", difficultyMaxEnabled: true }, deckByDifficulty: testDecks, wordDeck: testFullDeck }).word);
+}
+ok(randomWords.size === 4, "random mode still draws from the whole deck");
+
 console.log("Test: createGameRound — shared impostor clues per rules");
 const players = [
   { id: "p1", name: "A" }, { id: "p2", name: "B" }, { id: "p3", name: "C" },

@@ -131,7 +131,7 @@
                 </div>
 
                 <div class="difficulty-box">
-                  <label for="difficulty-select">Schwierigkeitsgrad</label>
+                  <label for="difficulty-select" id="difficulty-select-label">Schwierigkeitsgrad</label>
                   <select id="difficulty-select" aria-label="Schwierigkeitsgrad auswählen">
                     <option value="random">Zufällig</option>
                     <option value="easy">Leicht</option>
@@ -139,6 +139,10 @@
                     <option value="hard">Schwer</option>
                     <option value="veryHard">Sehr Schwer</option>
                   </select>
+                  <label class="checkbox-line">
+                    <input id="difficultyMaxEnabled" type="checkbox" />
+                    Als Maximum (niedrigere Grade einbeziehen)
+                  </label>
                 </div>
 
                 <div class="probability-block">
