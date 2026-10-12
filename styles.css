@@ -1062,13 +1062,28 @@ textarea {
   font-weight: 700;
 }
 
+.difficulty-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .difficulty-box select {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 10px;
   color: var(--text);
   padding: 10px 12px;
+}
+
+.difficulty-controls .checkbox-line {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .probability-block {

@@ -133,6 +133,23 @@ const nClues = round.impostorClues[round.impostors[0]].split(", ").length;
 ok(nClues === 3, `clue count == impostor count (got ${nClues})`);
 ok(round.word === "Baum", "fallback deck word used (Baum)");
 
+console.log("Test: difficulty selection");
+vm.runInContext(`
+  state.wordDeckByDifficulty = {
+    easy: [{ word: "Leicht", clues: [] }],
+    medium: [{ word: "Mittel", clues: [] }],
+    hard: [{ word: "Schwer", clues: [] }],
+    veryHard: [{ word: "Sehr schwer", clues: [] }],
+  };
+`, ctx);
+ctx.Math.random = () => 0;
+vm.runInContext(`state.settings = { difficulty: "medium", difficultyExclusive: false };`, ctx);
+ok(ctx.selectGameWord().word === "Leicht", "difficulty cap includes easier levels");
+vm.runInContext(`state.settings.difficultyExclusive = true;`, ctx);
+ok(ctx.selectGameWord().word === "Mittel", "exclusive mode uses only selected difficulty");
+vm.runInContext(`state.settings = { difficulty: "random", difficultyExclusive: false };`, ctx);
+ok(ctx.selectGameWord().word === "Leicht", "legacy random setting resolves to the full difficulty range");
+
 console.log("Test: createGameRound — too few players");
 assert.throws(() => ctx.createGameRound([players[0], players[1], players[2]], settings, counts2), /Nicht genügend/);
 passed += 1;

@@ -131,14 +131,16 @@
                 </div>
 
                 <div class="difficulty-box">
-                  <label for="difficulty-select">Schwierigkeitsgrad</label>
-                  <select id="difficulty-select" aria-label="Schwierigkeitsgrad auswählen">
-                    <option value="random">Zufällig</option>
-                    <option value="easy">Leicht</option>
-                    <option value="medium">Mittel</option>
-                    <option value="hard">Schwer</option>
-                    <option value="veryHard">Sehr Schwer</option>
-                  </select>
+                  <label for="difficulty-select">Bis Schwierigkeit</label>
+                  <div class="difficulty-controls">
+                    <select id="difficulty-select" aria-label="Höchste Schwierigkeit auswählen">
+                      <option value="easy">Leicht</option>
+                      <option value="medium">Mittel</option>
+                      <option value="hard">Schwer</option>
+                      <option value="veryHard">Sehr Schwer</option>
+                    </select>
+                    <label class="checkbox-line"><input id="difficultyExclusive" type="checkbox" /> Nur diese Schwierigkeit</label>
+                  </div>
                 </div>
 
                 <div class="probability-block">
