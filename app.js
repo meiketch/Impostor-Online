@@ -9,7 +9,8 @@ const defaultSettings = {
   detectiveCount: 0,
   itemsPerDetective: 1,
   doppelgangerCount: 0,
-  difficulty: "random",
+  difficulty: "veryHard",
+  difficultyExclusive: false,
   jesterProbability: 25,
   detectiveProbability: 25,
   doppelgangerProbability: 0,
@@ -476,6 +477,33 @@ const state = {
   screenDirection: "forward",
 };
 
+const LOBBY_CODE_KEY = "impostor-lobby-code";
+let accessToken = null;
+
+function registerPageExitCleanup() {
+  supabaseClient.auth.getSession().then(({ data }) => {
+    accessToken = data?.session?.access_token || null;
+  });
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    accessToken = session?.access_token || null;
+  });
+  // Best-effort removal when the tab is closed/reloaded; keepalive lets the request outlive the page.
+  window.addEventListener("pagehide", () => {
+    if (!state.lobbyCode || !state.currentPlayerId || !accessToken) return;
+    const { url, anonKey } = window.SUPABASE_CONFIG;
+    const query = `lobby_code=eq.${encodeURIComponent(state.lobbyCode)}&player_id=eq.${encodeURIComponent(state.currentPlayerId)}`;
+    try {
+      fetch(`${url}/rest/v1/lobby_players?${query}`, {
+        method: "DELETE",
+        keepalive: true,
+        headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (error) {
+      console.warn("Exit cleanup failed:", error);
+    }
+  });
+}
+
 let supabaseClient = null;
 let subscriptionChannel = null;
 let supabaseReady = false;
@@ -497,23 +525,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.round = null;
   }
   
-  // On page reload: remove player from old lobby and clear lobby state
-  if (supabaseReady && state.lobbyCode) {
+  // On page reload: remove player from the previous lobby (code is kept in sessionStorage)
+  const staleLobbyCode = sessionStorage.getItem(LOBBY_CODE_KEY);
+  if (supabaseReady && staleLobbyCode && state.currentPlayerId) {
     try {
       await supabaseClient
         .from("lobby_players")
         .delete()
-        .eq("lobby_code", state.lobbyCode)
+        .eq("lobby_code", staleLobbyCode)
         .eq("player_id", state.currentPlayerId);
     } catch (error) {
       console.warn("Could not remove player from lobby on reload:", error);
     }
-    state.lobbyCode = null;
-    state.players = [];
-    state.hostId = null;
-    state.isHost = false;
-    state.roundIdFromServer = null;
-    state.rolePayload = null;
+  }
+  sessionStorage.removeItem(LOBBY_CODE_KEY);
+  if (supabaseReady) {
+    registerPageExitCleanup();
   }
   
   if (supabaseReady && state.lobbyCode) {
@@ -631,6 +658,8 @@ async function leaveLobby() {
     }
     
     state.lobbyCode = null;
+    sessionStorage.removeItem(LOBBY_CODE_KEY);
+    if (state.lobbyPollTimer) clearInterval(state.lobbyPollTimer);
     state.players = [];
     state.round = null;
     state.rolePayload = null;
@@ -711,6 +740,7 @@ function bindEvents() {
       }
       state.currentPlayerId = player.id;
       state.lobbyCode = code;
+      sessionStorage.setItem(LOBBY_CODE_KEY, code);
       state.hostId = player.id;
       state.isHost = true;
       state.players = [player];
@@ -766,6 +796,7 @@ function bindEvents() {
         const player = { id: state.supabaseUserId, name };
         state.currentPlayerId = player.id;
         state.lobbyCode = code;
+        sessionStorage.setItem(LOBBY_CODE_KEY, code);
         state.hostId = lobby.hostId;
         state.isHost = state.hostId === player.id;
         state.players = [...lobby.players, player];
@@ -795,6 +826,18 @@ function bindEvents() {
       event.preventDefault();
       event.stopPropagation();
       showLeaveConfirmation();
+      return;
+    }
+
+    const removeBtn = event.target.closest(".remove-player-btn");
+    if (removeBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const removeId = removeBtn.dataset.removeId;
+      if (state.isHost && removeId && removeId !== state.currentPlayerId) {
+        await removePlayerFromLobby(removeId);
+        await refreshLobbyPlayers();
+      }
       return;
     }
 
@@ -1077,6 +1120,7 @@ function hydrateSettings() {
   try {
     const parsed = JSON.parse(saved);
     state.settings = { ...defaultSettings, ...parsed };
+    if (state.settings.difficulty === "random") state.settings.difficulty = "veryHard";
   } catch (error) {
     console.warn("Settings invalid:", error);
     state.settings = { ...defaultSettings };
@@ -1248,7 +1292,10 @@ function renderSettings() {
   if (doppelgangerProbEl) doppelgangerProbEl.value = state.settings.doppelgangerProbability;
   
   const difficultySelectEl = document.getElementById("difficulty-select");
-  if (difficultySelectEl) difficultySelectEl.value = state.settings.difficulty || "random";
+  if (difficultySelectEl) difficultySelectEl.value = state.settings.difficulty || "veryHard";
+
+  const difficultyExclusiveEl = document.getElementById("difficultyExclusive");
+  if (difficultyExclusiveEl) difficultyExclusiveEl.checked = !!state.settings.difficultyExclusive;
 
   const jesterProbValueEl = document.getElementById("jesterProbabilityValue");
   if (jesterProbValueEl) jesterProbValueEl.textContent = `${state.settings.jesterProbability}%`;
@@ -1269,7 +1316,7 @@ function renderSettings() {
   if (doppelgangerRandomEl) doppelgangerRandomEl.checked = !!state.settings.doppelgangerRandomEnabled;
 
   state.detectiveMessage = state.settings.detectiveMessage || state.detectiveMessage || "";
-  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select").forEach((control) => {
+  document.querySelectorAll("[data-action], #jesterProbability, #detectiveProbability, #doppelgangerProbability, #jesterRandomEnabled, #detectiveRandomEnabled, #doppelgangerRandomEnabled, #difficulty-select, #difficultyExclusive").forEach((control) => {
     control.disabled = !state.isHost;
   });
 }
@@ -1679,10 +1726,14 @@ function computeRoleCounts(settings) {
 }
 
 function selectGameWord() {
-  const difficulty = state.settings?.difficulty || "random";
-  const activeDeck = difficulty === "random"
-    ? state.wordDeck
-    : state.wordDeckByDifficulty[difficulty] || state.wordDeck;
+  const difficulties = ["easy", "medium", "hard", "veryHard"];
+  const selectedDifficulty = state.settings?.difficulty || "veryHard";
+  const selectedIndex = difficulties.indexOf(selectedDifficulty);
+  const includedDifficulties = state.settings?.difficultyExclusive
+    ? [selectedDifficulty]
+    : difficulties.slice(0, selectedIndex < 0 ? difficulties.length : selectedIndex + 1);
+  const activeDeck = includedDifficulties
+    .flatMap((difficulty) => state.wordDeckByDifficulty[difficulty] || []);
 
   if (!activeDeck || !activeDeck.length) {
     return { word: "Baum", clues: ["Wald", "Blätter", "Stamm", "Natur", "Holz"] };
@@ -1816,6 +1867,12 @@ async function refreshLobbyPlayers() {
     id: player.player_id,
     name: player.name,
   }));
+  // Removed by the host: leave the lobby locally
+  if (!state.players.some((player) => player.id === state.currentPlayerId)) {
+    await leaveLobby();
+    showStatus("Du wurdest aus der Lobby entfernt.");
+    return;
+  }
   render();
 }
 
